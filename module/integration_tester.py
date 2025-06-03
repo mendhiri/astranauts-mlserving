@@ -6,12 +6,12 @@ import fitz # PyMuPDF, to create dummy PDFs
 
 # Import functions from our modules
 from image_parser import extract_text_from_image
-from text_document_parser import extract_text_from_txt, extract_text_from_docx
+from module.text_document_parser import extract_text_from_txt, extract_text_from_docx
 from pdf_parser import extract_text_from_pdf
 from keyword_extractor import extract_keywords_and_values, format_to_json
 
 # --- Configuration ---
-DUMMY_FILES_DIR = "dummy_test_docs"
+DUMMY_FILES_DIR = "files"
 TARGET_KEYWORDS = [
     {'keyword': 'Income', 'variations': ['income', 'revenue', 'earnings']},
     {'keyword': 'Balance', 'variations': ['balance', 'account balance']},
