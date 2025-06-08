@@ -16,10 +16,14 @@ except ImportError:
 
 # Impor fungsi dari modul-modul kita
 from parser_gambar import ekstrak_teks_dari_gambar, DEFAULT_OPSI_PRAPROSES # Import default juga
+# from parser_gambar import ekstrak_data_terstruktur_vision # This will be mocked
 from parser_dokumen_teks import ekstrak_teks_dari_txt, ekstrak_teks_dari_docx
 from parser_pdf import ekstrak_teks_dari_pdf
-from pengekstrak_kata_kunci import ekstrak_data_keuangan_tahunan, format_ke_json
+from pengekstrak_kata_kunci import ekstrak_data_keuangan_tahunan, format_ke_json, ekstrak_data_keuangan_dari_struktur_vision, DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT, normalisasi_nilai_keuangan
 
+# Impor untuk mocking
+import unittest # Diperlukan untuk mock jika tidak ada Testcase
+from unittest.mock import patch
 
 # --- Konfigurasi untuk Tes OCR Baru ---
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data_ocr')
@@ -346,3 +350,139 @@ if __name__ == "__main__":
                 print("\n--- Melewati entri path dokumen (Lama) yang kosong. ---")
 
     print("\n--- Semua Tes Integrasi Selesai ---")
+
+
+# --- Tes untuk Google Vision Pipeline (dengan Mock) ---
+
+sample_structured_data_for_vision_test = [
+    # Line 1: Jumlah Aset Lancar : 1.234.567
+    {'text': 'Jumlah', 'bounds': [10, 10, 60, 22]}, # x_min, y_min, x_max, y_max
+    {'text': 'Aset', 'bounds': [65, 10, 105, 22]},
+    {'text': 'Lancar', 'bounds': [110, 10, 170, 22]},
+    {'text': ':', 'bounds': [175, 10, 180, 22]},
+    {'text': '1.234.567', 'bounds': [190, 10, 280, 22]},
+
+    # Line 2: Laba Usaha 789.000 (value slightly further away)
+    {'text': 'Laba', 'bounds': [10, 30, 60, 42]},
+    {'text': 'Usaha', 'bounds': [65, 30, 125, 42]},
+    {'text': '789.000', 'bounds': [200, 30, 290, 42]}, # Note: x_min is 200, keyword ends at 125
+
+    # Line 3: Pendapatan (tanpa nilai numerik jelas di kanan)
+    {'text': 'Pendapatan', 'bounds': [10, 50, 100, 62]},
+    {'text': 'Lain-lain', 'bounds': [105, 50, 180, 62]},
+    {'text': 'signifikan', 'bounds': [190, 50, 280, 62]},
+
+    # Line 4: Ekuitas (Rp Ribu) 555.666
+    {'text': 'Ekuitas', 'bounds': [10, 70, 80, 82]},
+    {'text': '(Rp', 'bounds': [85, 70, 115, 82]}, 
+    {'text': 'Ribu)', 'bounds': [120, 70, 160, 82]}, # Kata "Ribu)" akan diproses oleh normalisasi_nilai_keuangan
+    {'text': '555.666', 'bounds': [170, 70, 250, 82]},
+    
+    # Line 5: Some other text
+    {'text': 'Catatan', 'bounds': [10, 90, 70, 102]},
+    {'text': 'atas', 'bounds': [75, 90, 115, 102]},
+    {'text': 'laporan', 'bounds': [120, 90, 180, 102]},
+
+    # Line 6: Variasi dengan tanda baca "Laba Bersih:" diikuti angka
+    {'text': 'Laba', 'bounds': [10, 110, 50, 122]},
+    {'text': 'Bersih:', 'bounds': [55, 110, 115, 122]}, # Ada ':' di akhir
+    {'text': '987.654', 'bounds': [125, 110, 200, 122]},
+]
+
+@patch('parser_gambar.ekstrak_data_terstruktur_vision')
+def test_financial_extraction_with_vision_mock(mock_ekstrak_vision):
+    print("\n\n--- Menjalankan Tes Ekstraksi Keuangan dengan Mock Google Vision ---")
+    
+    # Konfigurasi mock untuk mengembalikan data sampel
+    mock_ekstrak_vision.return_value = sample_structured_data_for_vision_test
+    
+    # Panggil fungsi yang sebenarnya melakukan ekstraksi dari parser_gambar (yang di-mock)
+    # Ini hanya untuk menunjukkan alur, actual_structured_data akan sama dengan sample_structured_data_for_vision_test
+    # Dalam implementasi nyata, Anda mungkin memanggil fungsi tingkat tinggi yang menggunakan ekstrak_data_terstruktur_vision
+    # Di sini, kita langsung menggunakan data sampel untuk menguji pengekstrak_kata_kunci.
+    # actual_structured_data = ekstrak_data_terstruktur_vision("dummy_image_path.png") 
+    # assert actual_structured_data == sample_structured_data_for_vision_test # Verifikasi mock bekerja
+
+    # Panggil fungsi utama yang ingin diuji dengan data sampel (output dari mock)
+    hasil_ekstraksi = ekstrak_data_keuangan_dari_struktur_vision(
+        sample_structured_data_for_vision_test, 
+        DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT
+    )
+
+    print(f"Hasil Ekstraksi (Vision Mock): {format_ke_json(hasil_ekstraksi)}")
+
+    # Nilai yang diharapkan (float)
+    expected_aset_lancar = normalisasi_nilai_keuangan("1.234.567")
+    expected_laba_usaha = normalisasi_nilai_keuangan("789.000")
+    # Untuk "Ekuitas", kata kunci "Ekuitas" ditemukan, dan "555.666" adalah nilai.
+    # "Ribu)" ada di antara kata kunci dan nilai, normalisasi_nilai_keuangan harusnya bisa handle "555.666 Ribu" jika "Ribu" tergabung.
+    # Dalam sample_structured_data, "Ribu)" adalah token terpisah.
+    # Pengekstrak kata kunci akan mengambil "555.666" dan normalisasi_nilai_keuangan akan memprosesnya.
+    # Jika kita ingin "Ribu" diproses, teks "555.666 Ribu" harus menjadi satu item teks.
+    # Atau, logika di pengekstrak_kata_kunci harus lebih canggih untuk menggabungkan unit dari token terpisah.
+    # Saat ini, dengan token "555.666", normalisasi akan menghasilkan 555666.0.
+    # Jika kita ingin efek "Ribu", sample data atau logika normalisasi/ekstraksi perlu disesuaikan.
+    # Mari kita asumsikan untuk tes ini, "Ribu" tidak secara otomatis digabungkan dari token terpisah ke nilai.
+    expected_ekuitas = normalisasi_nilai_keuangan("555.666") # Menjadi 555666.0
+
+    # Untuk "Laba Bersih:", kata kunci adalah "Laba Bersih" (dari variasi "margin laba bersih", "laba bersih", dll.)
+    # DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT punya {"kata_dasar": "Laba Tahun Berjalan", "variasi": ["laba tahun berjalan", ..., "laba bersih setelah pajak", ...]}
+    # Dan juga {"kata_dasar": "Laba", "variasi": ["laba", ..., "laba bersih", ...]}
+    # Kata "Laba Bersih:" akan cocok dengan variasi "laba bersih" dari kata_dasar "Laba".
+    expected_laba_bersih = normalisasi_nilai_keuangan("987.654")
+
+
+    assert hasil_ekstraksi.get("Jumlah Aset Lancar") == expected_aset_lancar, \
+        f"Error: Jumlah Aset Lancar - Expected {expected_aset_lancar}, Got {hasil_ekstraksi.get('Jumlah Aset Lancar')}"
+    print(f"Test 'Jumlah Aset Lancar': Expected {expected_aset_lancar}, Got {hasil_ekstraksi.get('Jumlah Aset Lancar')} -> {'BERHASIL' if hasil_ekstraksi.get('Jumlah Aset Lancar') == expected_aset_lancar else 'GAGAL'}")
+
+    assert hasil_ekstraksi.get("Laba Usaha") == expected_laba_usaha, \
+        f"Error: Laba Usaha - Expected {expected_laba_usaha}, Got {hasil_ekstraksi.get('Laba Usaha')}"
+    print(f"Test 'Laba Usaha': Expected {expected_laba_usaha}, Got {hasil_ekstraksi.get('Laba Usaha')} -> {'BERHASIL' if hasil_ekstraksi.get('Laba Usaha') == expected_laba_usaha else 'GAGAL'}")
+
+    # Cek Ekuitas
+    # Perlu dipastikan kata dasar mana yang diharapkan match "Ekuitas"
+    # DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT punya:
+    # {"kata_dasar": "Jumlah Ekuitas", "variasi": ["jumlah ekuitas", "total ekuitas", "ekuitas"]},
+    # {"kata_dasar": "Ekuitas", "variasi": ["ekuitas", "equity", "shareholders' equity", "modal"]},
+    # Keduanya bisa match. Jika "Ekuitas" (dari daftar umum) yang match:
+    assert hasil_ekstraksi.get("Ekuitas") == expected_ekuitas, \
+        f"Error: Ekuitas - Expected {expected_ekuitas}, Got {hasil_ekstraksi.get('Ekuitas')}"
+    print(f"Test 'Ekuitas': Expected {expected_ekuitas}, Got {hasil_ekstraksi.get('Ekuitas')} -> {'BERHASIL' if hasil_ekstraksi.get('Ekuitas') == expected_ekuitas else 'GAGAL'}")
+    # Jika "Jumlah Ekuitas" yang match:
+    # assert hasil_ekstraksi.get("Jumlah Ekuitas") == expected_ekuitas, \
+    #     f"Error: Jumlah Ekuitas - Expected {expected_ekuitas}, Got {hasil_ekstraksi.get('Jumlah Ekuitas')}"
+    # print(f"Test 'Jumlah Ekuitas': Expected {expected_ekuitas}, Got {hasil_ekstraksi.get('Jumlah Ekuitas')} -> {'BERHASIL' if hasil_ekstraksi.get('Jumlah Ekuitas') == expected_ekuitas else 'GAGAL'}")
+
+
+    assert hasil_ekstraksi.get("Pendapatan") is None, \
+        f"Error: Pendapatan - Expected None, Got {hasil_ekstraksi.get('Pendapatan')}"
+    print(f"Test 'Pendapatan': Expected None, Got {hasil_ekstraksi.get('Pendapatan')} -> {'BERHASIL' if hasil_ekstraksi.get('Pendapatan') is None else 'GAGAL'}")
+
+    # Cek untuk "Laba Bersih:" yang seharusnya match dengan kata_dasar "Laba" karena "laba bersih" adalah variasinya
+    assert hasil_ekstraksi.get("Laba") == expected_laba_bersih, \
+        f"Error: Laba (dari Laba Bersih:) - Expected {expected_laba_bersih}, Got {hasil_ekstraksi.get('Laba')}"
+    print(f"Test 'Laba' (dari variasi Laba Bersih): Expected {expected_laba_bersih}, Got {hasil_ekstraksi.get('Laba')} -> {'BERHASIL' if hasil_ekstraksi.get('Laba') == expected_laba_bersih else 'GAGAL'}")
+    
+    print("--- Tes Ekstraksi Keuangan dengan Mock Google Vision Selesai ---")
+# Panggil tes baru di main execution block
+
+# --- Eksekusi ---
+if __name__ == "__main__":
+    print("Memulai Tes Integrasi...")
+
+    # 1. Setup file tes untuk OCR baru
+    test_files_ready = setup_test_files()
+
+    # 2. Jalankan tes OCR baru jika file siap
+    if test_files_ready:
+        run_image_ocr_tests()
+        run_pdf_ocr_tests() # Akan menampilkan pesan placeholder
+    else:
+        print("\nTidak dapat menyiapkan file tes OCR. Melewati tes OCR gambar dan PDF.")
+
+    # 2.b Jalankan tes pipeline Vision (mocked)
+    test_financial_extraction_with_vision_mock() # Panggil fungsi tes baru di sini
+
+    # 3. Bagian NLTK dan pemrosesan dokumen lama (opsional, bisa di-disable jika tidak relevan lagi)
+    print("\n\n--- Memeriksa Sumber Daya NLTK (untuk logika lama) ---")

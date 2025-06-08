@@ -4,6 +4,10 @@ from PIL import Image
 import cv2  # Impor OpenCV
 import numpy as np  # Impor NumPy
 import re  # Untuk membersihkan teks hasil OCR
+import io
+import os
+from dotenv import load_dotenv
+from google.cloud import vision
 
 try:
     import easyocr
@@ -16,6 +20,83 @@ try:
 except ImportError:
     pyocr = None  # Akan ditangani di logika OCR
 
+def ekstrak_data_terstruktur_vision(image_path: str) -> list[dict]:
+    """
+    Mengekstrak data terstruktur dari gambar menggunakan Google Vision API.
+
+    Args:
+        image_path: Path ke file gambar.
+
+    Returns:
+        Sebuah list dictionary, dimana setiap dictionary berisi 'text' dan 'bounds'.
+        'bounds' adalah list [x_min, y_min, x_max, y_max].
+        Mengembalikan list kosong jika tidak ada teks terdeteksi atau terjadi error.
+    """
+    load_dotenv()
+    extracted_data = []
+
+    credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if credentials_path:
+        print(f"INFO: Menggunakan Google Cloud credentials dari: {credentials_path}")
+    else:
+        print("PERINGATAN: GOOGLE_APPLICATION_CREDENTIALS tidak diatur. Pastikan service account key JSON "
+              "tersedia di path default atau environment variable sudah di-set.")
+
+    try:
+        client = vision.ImageAnnotatorClient()
+
+        if not os.path.exists(image_path):
+            print(f"ERROR: File gambar tidak ditemukan di {image_path}")
+            return []
+
+        with io.open(image_path, 'rb') as image_file:
+            content = image_file.read()
+
+        image = vision.Image(content=content)
+
+        print(f"INFO: Mengirim permintaan ke Google Vision API untuk gambar: {image_path}")
+        response = client.document_text_detection(image=image)
+
+        if response.error.message:
+            raise Exception(
+                f"Google Vision API error: {response.error.message} (Code: {response.error.code})"
+            )
+
+        if response.full_text_annotation:
+            print("INFO: Memproses anotasi teks dari Vision API...")
+            for page in response.full_text_annotation.pages:
+                for block in page.blocks:
+                    for paragraph in block.paragraphs:
+                        for word in paragraph.words:
+                            word_text = ''.join([
+                                symbol.text for symbol in word.symbols
+                            ])
+                            
+                            # Ekstrak bounding box dan konversi ke format [x_min, y_min, x_max, y_max]
+                            vertices = word.bounding_box.vertices
+                            x_coords = [v.x for v in vertices]
+                            y_coords = [v.y for v in vertices]
+                            
+                            x_min = min(x_coords)
+                            y_min = min(y_coords)
+                            x_max = max(x_coords)
+                            y_max = max(y_coords)
+                            
+                            bounds = [x_min, y_min, x_max, y_max]
+                            
+                            extracted_data.append({'text': word_text, 'bounds': bounds})
+            print(f"INFO: Ekstraksi selesai. {len(extracted_data)} kata terdeteksi.")
+        else:
+            print("INFO: Tidak ada anotasi teks ditemukan dalam respons Vision API.")
+
+    except FileNotFoundError:
+        print(f"ERROR: File gambar tidak ditemukan di path: {image_path}")
+    except Exception as e:
+        print(f"ERROR: Terjadi kesalahan saat memproses gambar dengan Google Vision API: {e}")
+        # Opsional: bisa raise error lagi atau kembalikan list kosong sebagai indikasi kegagalan
+        # raise e 
+    
+    return extracted_data
 
 DEFAULT_OPSI_PRAPROSES = {
     'dpi_target': 300,

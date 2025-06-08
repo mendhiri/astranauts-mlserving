@@ -85,7 +85,22 @@ def inisialisasi_nltk_resources():
 inisialisasi_nltk_resources()
 
 # Definisi daftar kata kunci keuangan dalam Bahasa Indonesia
+# Definisi daftar kata kunci keuangan dalam Bahasa Indonesia
 DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
+    # ASTRA
+    {"kata_dasar": "Jumlah Aset Lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar"]},
+    {"kata_dasar": "Jumlah Aset Tidak Lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar"]},
+    {"kata_dasar": "Jumlah Aset", "variasi": ["Jumlah aset", "Total aset"]},
+    {"kata_dasar": "Jumlah Liabilitas Jangka Pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek"]},
+    {"kata_dasar": "Jumlah Liabilitas Jangka Panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang"]},
+    {"kata_dasar": "Jumlah Liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas"]},
+    {"kata_dasar": "Jumlah Ekuitas", "variasi": ["Jumlah ekuitas", "Total ekuitas"]},
+    {"kata_dasar": "Pendapatan Bersih", "variasi": ["Pendapatan bersih", "Penjualan bersih"]},
+    {"kata_dasar": "Beban Pokok Pendapatan", "variasi": ["Beban pokok pendapatan", "Harga pokok penjualan"]},
+    {"kata_dasar": "Laba Bruto", "variasi": ["Laba bruto", "Laba kotor"]},
+    {"kata_dasar": "Laba Sebelum Pajak Penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan"]},
+    {"kata_dasar": "Laba Tahun Berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan"]},
+
     # PROFITABILITY
     {"kata_dasar": "Margin Laba Bersih", "variasi": ["margin laba bersih", "net profit margin", "margin keuntungan bersih"]},
     {"kata_dasar": "Margin Operasi", "variasi": ["margin operasi", "operating margin", "ebit margin", "margin ebit"]},
@@ -148,31 +163,7 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "LVGI", "variasi": ["lvgi", "leverage index"]},
     {"kata_dasar": "TATA", "variasi": ["tata", "total accruals to total assets"]},
     {"kata_dasar": "Nilai M-Score", "variasi": ["m-score", "beneish m-score", "hasil m-score"]},
-
-    # ASTRA
-    {"kata_dasar": "Jumlah Aset Lancar", "variasi": ["jumlah aset lancar", "aset lancar", "total aset lancar"]},
-    {"kata_dasar": "Jumlah Aset Tidak Lancar", "variasi": ["jumlah aset tidak lancar", "aset tidak lancar", "total aset tidak lancar"]},
-    {"kata_dasar": "Jumlah Aset", "variasi": ["jumlah aset", "total aset"]},
-    {"kata_dasar": "Jumlah Liabilitas Jangka Pendek", "variasi": ["jumlah liabilitas jangka pendek", "liabilitas jangka pendek", "total liabilitas jangka pendek"]},
-    {"kata_dasar": "Jumlah Liabilitas Jangka Panjang", "variasi": ["jumlah liabilitas jangka panjang", "liabilitas jangka panjang", "total liabilitas jangka panjang"]},
-    {"kata_dasar": "Jumlah Liabilitas", "variasi": ["jumlah liabilitas", "total liabilitas"]},
-    {"kata_dasar": "Jumlah Ekuitas", "variasi": ["jumlah ekuitas", "total ekuitas", "ekuitas"]},
-    {"kata_dasar": "Pendapatan Usaha", "variasi": ["pendapatan usaha", "penjualan bersih", "pendapatan bersih usaha"]},
-    {"kata_dasar": "Beban Pokok Pendapatan", "variasi": ["beban pokok pendapatan", "harga pokok penjualan"]},
-    {"kata_dasar": "Laba Bruto", "variasi": ["laba bruto", "laba kotor"]},
-    {"kata_dasar": "Laba Usaha", "variasi": ["laba usaha", "laba operasional", "penghasilan operasional"]},
-    {"kata_dasar": "Laba Sebelum Pajak", "variasi": ["laba sebelum pajak", "penghasilan sebelum pajak", "laba/(rugi) sebelum pajak penghasilan"]},
-    {"kata_dasar": "Laba Tahun Berjalan", "variasi": ["laba tahun berjalan", "laba bersih tahun berjalan", "penghasilan bersih tahun berjalan", "laba bersih setelah pajak", "laba periode berjalan", "laba bersih komprehensif tahun berjalan"]},
-
-    # Tambahkan kata kunci umum
-    {"kata_dasar": "Laba", "variasi": ["laba", "profit", "earnings", "net income", "laba bersih", "laba kotor", "laba operasional", "laba sebelum pajak"]},
-    {"kata_dasar": "Pendapatan", "variasi": ["pendapatan", "revenue", "income", "sales", "penjualan", "penerimaan"]},
-    {"kata_dasar": "Biaya", "variasi": ["biaya", "cost", "expenses", "beban", "pengeluaran"]},
-    {"kata_dasar": "Aset", "variasi": ["aset", "assets", "resources", "resources"]},
-    {"kata_dasar": "Liabilitas", "variasi": ["liabilitas", "liabilities", "hutang", "utang"]},
-    {"kata_dasar": "Ekuitas", "variasi": ["ekuitas", "equity", "shareholders' equity", "modal"]},
 ]
-
 
 # Catatan: 'keyword' di kamus target diubah ke 'kata_dasar' agar konsisten dengan nama variabel.
 # 'variations' diubah ke 'variasi'.
@@ -311,6 +302,144 @@ def identifikasi_tahun_pelaporan(teks_dokumen: str, jumlah_karakter_awal: int = 
         return str(max(kandidat_tahun))
 
     return None
+
+
+def is_potentially_numeric(text: str) -> bool:
+    """
+    Checks if the string contains at least one digit and possibly typical numeric characters.
+    This is a heuristic. normalisasi_nilai_keuangan does the thorough check.
+    """
+    if not isinstance(text, str):
+        return False
+    # Allows for digits, dots, commas, parentheses (for negative), and currency symbols/units briefly
+    # Checks for at least one digit, and not two or more letters (e.g. "Rp", "USD" are ok, but "Table" is not)
+    if not re.search(r'\d', text): # Must contain at least one digit
+        return False
+    if re.search(r'[a-zA-Z]{3,}', text): # Contains three or more consecutive letters, likely not a number
+        return False
+    # Allows things like (1.234,56) or 1.234.567 or 1,234.56 or USD100 or 100EUR etc.
+    # Further check for patterns that are clearly not numbers like "A1" "B2" if needed,
+    # but normalisasi_nilai_keuangan should handle most non-numeric cases.
+    return True
+
+
+def ekstrak_data_keuangan_dari_struktur_vision(
+    structured_ocr_data: list[dict], 
+    daftar_kata_kunci: list[dict] | None = None
+) -> dict:
+    """
+    Mengekstrak data keuangan dari output terstruktur Google Vision API.
+
+    Args:
+        structured_ocr_data: List dict {'text': 'word', 'bounds': [x_min, y_min, x_max, y_max]}.
+        daftar_kata_kunci: Daftar kata kunci untuk diekstrak. Menggunakan default jika None.
+
+    Returns:
+        Dict berisi data keuangan yang diekstrak {kata_dasar: nilai}.
+    """
+    if daftar_kata_kunci is None:
+        daftar_kata_kunci = DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT
+    
+    data_hasil_ekstraksi = {}
+    if not structured_ocr_data:
+        return data_hasil_ekstraksi
+
+    # Parameter untuk pencarian spasial
+    MAX_HORIZONTAL_DISTANCE_FACTOR = 5  # Faktor pengali lebar kata kunci untuk jarak horizontal maksimal
+    VERTICAL_ALIGNMENT_TOLERANCE_FACTOR = 0.7 # Faktor pengali tinggi kata kunci untuk toleransi alignment vertikal
+
+    for info_kata_kunci in daftar_kata_kunci:
+        kata_dasar_target = info_kata_kunci["kata_dasar"]
+        nilai_ditemukan_final = None
+        nilai_ditemukan_final_kedekatan = float('inf') # Untuk mencari nilai terdekat
+
+        for variasi in info_kata_kunci["variasi"]:
+            variasi_lower = variasi.lower()
+            kata_variasi = variasi_lower.split()
+            jumlah_kata_variasi = len(kata_variasi)
+
+            for i in range(len(structured_ocr_data) - jumlah_kata_variasi + 1):
+                # Coba match variasi (bisa multi-kata)
+                match_ditemukan = True
+                teks_tergabung_variasi = []
+                for k in range(jumlah_kata_variasi):
+                    struktur_item_variasi = structured_ocr_data[i+k]
+                    teks_tergabung_variasi.append(struktur_item_variasi['text'].lower())
+                    # Periksa apakah kata dalam variasi cocok, hilangkan tanda baca di akhir kata untuk perbandingan
+                    # Ini penting karena OCR mungkin menangkap "pendapatan," atau "aset:"
+                    kata_ocr_cleaned = re.sub(r'[^\w\s]', '', struktur_item_variasi['text'].lower())
+                    kata_variasi_cleaned = re.sub(r'[^\w\s]', '', kata_variasi[k])
+                    
+                    if kata_ocr_cleaned != kata_variasi_cleaned:
+                        match_ditemukan = False
+                        break
+                
+                if match_ditemukan:
+                    # Variasi ditemukan, dapatkan BBox dari kata terakhir variasi
+                    keyword_bounds_first_word = structured_ocr_data[i]['bounds']
+                    keyword_bounds_last_word = structured_ocr_data[i + jumlah_kata_variasi - 1]['bounds']
+                    
+                    y_min_keyword = keyword_bounds_last_word[1]
+                    y_max_keyword = keyword_bounds_last_word[3]
+                    x_max_keyword = keyword_bounds_last_word[2]
+                    
+                    keyword_height = y_max_keyword - y_min_keyword
+                    keyword_width = x_max_keyword - keyword_bounds_first_word[0] # Lebar keseluruhan variasi
+
+                    # Cari nilai numerik di sebelah kanan pada baris yang sama (kurang lebih)
+                    for j, struktur_item_value in enumerate(structured_ocr_data):
+                        # Hindari memproses kata kunci itu sendiri sebagai nilai
+                        if i <= j < i + jumlah_kata_variasi:
+                            continue
+
+                        if not is_potentially_numeric(struktur_item_value['text']):
+                            continue
+
+                        value_bounds = struktur_item_value['bounds']
+                        y_min_value = value_bounds[1]
+                        y_max_value = value_bounds[3]
+                        x_min_value = value_bounds[0]
+                        
+                        # 1. Cek Alignment Vertikal (kurang lebih pada baris yang sama)
+                        # Pusat vertikal kata kunci dan nilai harus cukup dekat
+                        center_y_keyword = (y_min_keyword + y_max_keyword) / 2
+                        center_y_value = (y_min_value + y_max_value) / 2
+                        vertical_distance_centers = abs(center_y_keyword - center_y_value)
+                        
+                        # Toleransi berdasarkan tinggi kata kunci
+                        # Jika jarak vertikal antar pusat < toleransi tinggi kata kunci, anggap sejajar
+                        is_vertically_aligned = vertical_distance_centers < (keyword_height * VERTICAL_ALIGNMENT_TOLERANCE_FACTOR)
+
+                        # 2. Cek Posisi Horizontal (nilai di sebelah kanan kata kunci)
+                        is_to_the_right = x_min_value > x_max_keyword
+
+                        # 3. Cek Kedekatan Horizontal
+                        horizontal_distance = x_min_value - x_max_keyword
+                        # Jarak horizontal maksimal yang diizinkan, berdasarkan lebar kata kunci
+                        # Ini membantu menghindari pengambilan angka yang terlalu jauh
+                        max_allowed_horizontal_distance = keyword_width * MAX_HORIZONTAL_DISTANCE_FACTOR
+                        
+                        is_horizontally_close = 0 < horizontal_distance < max_allowed_horizontal_distance
+
+                        if is_vertically_aligned and is_to_the_right and is_horizontally_close:
+                            nilai_ternormalisasi = normalisasi_nilai_keuangan(struktur_item_value['text'])
+                            if nilai_ternormalisasi is not None:
+                                # Jika ini nilai valid pertama, atau lebih dekat dari yang sebelumnya
+                                if horizontal_distance < nilai_ditemukan_final_kedekatan:
+                                    nilai_ditemukan_final = nilai_ternormalisasi
+                                    nilai_ditemukan_final_kedekatan = horizontal_distance
+                                    # print(f"Kandidat untuk '{variasi}': {struktur_item_value['text']} -> {nilai_ternormalisasi} (Jarak: {horizontal_distance:.2f})")
+
+
+        if nilai_ditemukan_final is not None:
+             # Jika sudah ada nilai untuk kata dasar ini dari variasi lain, jangan timpa kecuali ada logika prioritas
+             # Untuk saat ini, kita ambil yang terakhir ditemukan jika ada beberapa variasi yang cocok.
+             # Seharusnya, kita bisa memilih berdasarkan keyakinan atau variasi mana yang lebih spesifik.
+            data_hasil_ekstraksi[kata_dasar_target] = nilai_ditemukan_final
+            # Reset kedekatan untuk kata dasar berikutnya
+            nilai_ditemukan_final_kedekatan = float('inf') 
+
+    return data_hasil_ekstraksi
 
 
 def ekstrak_data_keuangan_tahunan(teks_dokumen: str, daftar_kata_kunci: list[dict] | None = None) -> dict:
