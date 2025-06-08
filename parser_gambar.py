@@ -115,7 +115,7 @@ def ekstrak_data_terstruktur_vision(image_path: str) -> list[dict]:
     return words_data
 
 DEFAULT_OPSI_PRAPROSES = {
-    'dpi_target': 300,
+    'dpi_target': 600,
     'min_ocr_height': 1000,
     'denoising': {'type': 'fastNlMeans', 'h': 10},
     'sharpening': False,

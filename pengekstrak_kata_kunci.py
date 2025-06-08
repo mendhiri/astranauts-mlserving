@@ -595,32 +595,85 @@ def ekstrak_data_keuangan_dari_teks_ocr_refined(
 def ekstrak_data_keuangan_tahunan(teks_dokumen: str, daftar_kata_kunci: list[dict] | None = None) -> dict:
     if daftar_kata_kunci is None:
         daftar_kata_kunci = DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT
-    data_hasil_ekstraksi = {}
-    if not teks_dokumen:
+    
+    # Initialize all kata_dasar from daftar_kata_kunci to None
+    data_hasil_ekstraksi = {info["kata_dasar"]: None for info in daftar_kata_kunci}
+    
+    if not teks_dokumen or not isinstance(teks_dokumen, str):
         return data_hasil_ekstraksi
 
-    tahun_pelaporan = identifikasi_tahun_pelaporan(teks_dokumen)
-    tahun_sebelumnya_str = str(int(tahun_pelaporan) - 1) if tahun_pelaporan else None
+    # Pre-process lines: lowercase and strip whitespace
+    lines = [line.strip() for line in teks_dokumen.lower().splitlines()]
+    
+    # tahun_pelaporan = identifikasi_tahun_pelaporan(teks_dokumen) # Not used for value selection yet
 
-    baris_dokumen = teks_dokumen.lower().splitlines()
+    MAX_LINES_TO_SEARCH_AFTER_KEYWORD = 3 # Max non-empty lines to check after the keyword's line
+
     for info_kata_kunci in daftar_kata_kunci:
         kata_dasar_target = info_kata_kunci["kata_dasar"]
-        nilai_ditemukan = None
+        nilai_final_untuk_kata_dasar = None # Stores the single value found for this kata_dasar
+
         for variasi in info_kata_kunci["variasi"]:
             variasi_lower = variasi.lower()
-            for i, baris in enumerate(baris_dokumen):
-                if variasi_lower in baris:
-                    # Cari angka di baris yang sama atau baris berikutnya
-                    pola_angka = re.compile(r"[\d\.,]+")
-                    angka_ditemukan = pola_angka.findall(baris)
-                    if not angka_ditemukan and i+1 < len(baris_dokumen):
-                        angka_ditemukan = pola_angka.findall(baris_dokumen[i+1])
-                    if angka_ditemukan:
-                        nilai_ternormalisasi = normalisasi_nilai_keuangan(angka_ditemukan[0])
-                        if nilai_ternormalisasi is not None:
-                            nilai_ditemukan = nilai_ternormalisasi
-                            break
-            if nilai_ditemukan is not None:
-                break
-        data_hasil_ekstraksi[kata_dasar_target] = nilai_ditemukan
+            
+            for line_idx, current_line_content in enumerate(lines):
+                if not current_line_content: # Skip empty lines (already stripped)
+                    continue
+
+                keyword_pos = current_line_content.find(variasi_lower)
+                if keyword_pos != -1:
+                    # Keyword found in current_line_content
+                    
+                    # 1. Search on the remainder of the same line
+                    text_after_keyword_on_same_line = current_line_content[keyword_pos + len(variasi_lower):]
+                    # Split carefully to handle various spacing
+                    tokens_on_same_line = [t for t in text_after_keyword_on_same_line.split(' ') if t] 
+                    for token in tokens_on_same_line:
+                        normalized_val = normalisasi_nilai_keuangan(token)
+                        if normalized_val is not None:
+                            nilai_final_untuk_kata_dasar = normalized_val
+                            break # Found value on same line, stop token search
+                    
+                    if nilai_final_untuk_kata_dasar is not None:
+                        # Found value for this variasi, no need to check subsequent lines for this keyword instance
+                        break # Break from line_idx loop (move to next variasi or next kata_dasar)
+
+                    # 2. If not found on same line, search on subsequent non-empty lines
+                    lines_searched_count = 0
+                    for lookahead_idx in range(line_idx + 1, len(lines)):
+                        if lines_searched_count >= MAX_LINES_TO_SEARCH_AFTER_KEYWORD:
+                            break # Searched enough subsequent lines
+
+                        next_line_content = lines[lookahead_idx]
+                        if not next_line_content: # Skip empty lines
+                            continue
+                        
+                        lines_searched_count += 1 # Count a non-empty line search
+
+                        # Stop if another keyword (not related to current kata_dasar_target) is found
+                        if is_another_keyword_present(next_line_content, kata_dasar_target, daftar_kata_kunci):
+                            break # Stop downward search for this instance of variasi
+
+                        # Split carefully
+                        tokens_on_next_line = [t for t in next_line_content.split(' ') if t]
+                        for token in tokens_on_next_line:
+                            normalized_val = normalisasi_nilai_keuangan(token)
+                            if normalized_val is not None:
+                                nilai_final_untuk_kata_dasar = normalized_val
+                                break # Found value on subsequent line, stop token search
+                        
+                        if nilai_final_untuk_kata_dasar is not None:
+                            break # Break from lookahead_idx loop (found value on subsequent lines)
+                
+                if nilai_final_untuk_kata_dasar is not None:
+                    # Value found for this variasi, break from iterating lines for this variasi
+                    break 
+            
+            if nilai_final_untuk_kata_dasar is not None:
+                # Value found for this kata_dasar_target using one of its variasi
+                break # Break from variasi loop (move to next kata_dasar_target)
+        
+        # Assign the found value (or None if not found) to the specific kata_dasar_target
+        data_hasil_ekstraksi[kata_dasar_target] = nilai_final_untuk_kata_dasar
+        
     return data_hasil_ekstraksi
