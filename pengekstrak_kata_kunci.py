@@ -7,14 +7,82 @@ import re
 import json
 import unicodedata  # Untuk normalisasi lanjutan jika diperlukan
 
-# Inisialisasi pelumat dan daftar kata henti
-pelumat = WordNetLemmatizer()
-try:
-    kata_henti = set(stopwords.words('indonesian'))
-    print("Menggunakan stopwords Bahasa Indonesia.")
-except IOError:
-    print("Stopwords Bahasa Indonesia tidak ditemukan, menggunakan stopwords Bahasa Inggris sebagai fallback.")
-    kata_henti = set(stopwords.words('english'))
+# Global variables for NLTK resources
+pelumat = None
+kata_henti = None
+
+def inisialisasi_nltk_resources():
+    """Menginisialisasi dan mengunduh sumber daya NLTK yang diperlukan jika belum ada."""
+    global pelumat, kata_henti
+    
+    # 1. Stopwords
+    try:
+        kata_henti = set(stopwords.words('indonesian'))
+        print("Berhasil memuat stopwords Bahasa Indonesia.")
+    except LookupError:
+        print("Resource 'stopwords' (indonesian) tidak ditemukan. Mencoba mengunduh...")
+        try:
+            nltk.download('stopwords', quiet=True)
+            kata_henti = set(stopwords.words('indonesian'))
+            print("Berhasil mengunduh dan memuat stopwords Bahasa Indonesia.")
+        except Exception as e_ind: # Fallback to English if Indonesian still fails
+            print(f"Gagal memuat stopwords Bahasa Indonesia setelah unduh: {e_ind}. Menggunakan stopwords Bahasa Inggris.")
+            try:
+                kata_henti = set(stopwords.words('english'))
+                print("Berhasil memuat stopwords Bahasa Inggris sebagai fallback.")
+            except Exception as e_eng:
+                print(f"Gagal memuat stopwords Bahasa Inggris: {e_eng}. Kata henti akan kosong.")
+                kata_henti = set() # Empty set as last resort
+    except Exception as e_initial_load: # Catch other potential errors during initial load
+        print(f"Error tak terduga saat memuat stopwords: {e_initial_load}. Kata henti akan kosong.")
+        kata_henti = set()
+
+
+    # 2. WordNetLemmatizer and its data ('wordnet' and 'omw-1.4')
+    try:
+        pelumat = WordNetLemmatizer()
+        pelumat.lemmatize("test") # Test lemmatization to trigger download if necessary
+        print("WordNetLemmatizer berhasil diinisialisasi.")
+    except LookupError:
+        print("Resource 'wordnet' atau 'omw-1.4' tidak ditemukan untuk WordNetLemmatizer. Mencoba mengunduh...")
+        try:
+            nltk.download('wordnet', quiet=True)
+            nltk.download('omw-1.4', quiet=True) # Needed for lemmatizing in languages other than English
+            pelumat = WordNetLemmatizer()
+            pelumat.lemmatize("test") # Re-test
+            print("Berhasil mengunduh data WordNet dan menginisialisasi WordNetLemmatizer.")
+        except Exception as e:
+            print(f"Gagal menginisialisasi WordNetLemmatizer setelah unduh: {e}. Pelumat tidak akan berfungsi.")
+            # Define a dummy lemmatizer if initialization fails
+            class DummyLemmatizer:
+                def lemmatize(self, word, pos=None): return word
+            pelumat = DummyLemmatizer()
+            print("Menggunakan DummyLemmatizer sebagai fallback.")
+    except Exception as e_init_lemma:
+        print(f"Error tak terduga saat inisialisasi WordNetLemmatizer: {e_init_lemma}. Pelumat tidak akan berfungsi.")
+        class DummyLemmatizer:
+            def lemmatize(self, word, pos=None): return word
+        pelumat = DummyLemmatizer()
+        print("Menggunakan DummyLemmatizer sebagai fallback.")
+
+    # 3. Punkt (for word_tokenize)
+    try:
+        word_tokenize("test sentence")
+        print("Tokenizer 'punkt' tampaknya tersedia.")
+    except LookupError:
+        print("Resource 'punkt' untuk tokenizer tidak ditemukan. Mencoba mengunduh...")
+        try:
+            nltk.download('punkt', quiet=True)
+            word_tokenize("test sentence") # Re-test
+            print("Berhasil mengunduh 'punkt'. Tokenizer siap digunakan.")
+        except Exception as e:
+            print(f"Gagal mengunduh atau menguji 'punkt' setelah unduh: {e}. Tokenisasi mungkin gagal.")
+    except Exception as e_init_punkt:
+        print(f"Error tak terduga saat memeriksa tokenizer 'punkt': {e_init_punkt}. Tokenisasi mungkin gagal.")
+
+
+# Panggil fungsi inisialisasi saat modul dimuat
+inisialisasi_nltk_resources()
 
 # Definisi daftar kata kunci keuangan dalam Bahasa Indonesia
 DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
@@ -123,14 +191,25 @@ def format_ke_json(kamus_data: dict, indentasi: int = 4) -> str:
 # Fungsi untuk pra-pemrosesan teks (tokenisasi, lowercase, stopwords, lemmatisasi)
 def praproses_teks(teks_mentah: str) -> list[str]:
     """Melakukan tokenisasi, mengubah ke huruf kecil, menghapus kata henti, dan melumatkan teks."""
-    if not teks_mentah:
+    if not teks_mentah or pelumat is None or kata_henti is None: # Check if NLTK resources are available
         return []
-    token_kata = word_tokenize(teks_mentah.lower())
+    try:
+        token_kata = word_tokenize(teks_mentah.lower())
+    except Exception as e:
+        print(f"Gagal melakukan tokenisasi kata: {e}. Pastikan resource 'punkt' NLTK tersedia.")
+        return []
+        
     # Pelumatan mungkin kurang optimal untuk Bahasa Indonesia dengan WordNetLemmatizer default NLTK.
     # Pertimbangkan stemmer Bahasa Indonesia jika akurasi menjadi masalah.
-    token_terproses = [
-        pelumat.lemmatize(token) for token in token_kata if token.isalnum() and token not in kata_henti
-    ]
+    token_terproses = []
+    for token in token_kata:
+        if token.isalnum() and token not in kata_henti:
+            try:
+                token_terproses.append(pelumat.lemmatize(token))
+            except Exception as e_lemma:
+                # This might happen if lemmatizer failed init but wasn't replaced by dummy
+                print(f"Error saat lemmatisasi token '{token}': {e_lemma}. Menggunakan token asli.")
+                token_terproses.append(token) 
     return token_terproses
 
 

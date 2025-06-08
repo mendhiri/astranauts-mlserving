@@ -25,7 +25,8 @@ except ImportError:
 
 # Fungsi worker untuk melakukan OCR pada satu halaman secara paralel
 def ocr_satu_halaman_worker_paralel(nomor_halaman_asli: int, data_pixmap_bytes_png: bytes,
-                                    fungsi_ocr_gambar: callable) -> tuple[int, str] | tuple[int, Any] | None:
+                                    fungsi_ocr_gambar: callable, mesin_ocr: str, 
+                                    opsi_praproses: dict) -> tuple[int, str] | tuple[int, Any] | None:
     """
     Worker untuk memproses OCR satu halaman PDF.
     Merender pixmap bytes menjadi gambar, menyimpannya sementara, lalu melakukan OCR.
@@ -43,7 +44,10 @@ def ocr_satu_halaman_worker_paralel(nomor_halaman_asli: int, data_pixmap_bytes_p
     try:
         gambar_pil = Image.open(io.BytesIO(data_pixmap_bytes_png))
         gambar_pil.save(path_gambar_temporer_worker)
-        teks_hasil_ocr = fungsi_ocr_gambar(path_gambar_temporer_worker)
+        # Panggil fungsi OCR dengan parameter tambahan
+        teks_hasil_ocr = fungsi_ocr_gambar(path_gambar_temporer_worker, 
+                                           mesin_ocr=mesin_ocr, 
+                                           opsi_praproses=opsi_praproses)
         return nomor_halaman_asli, teks_hasil_ocr.strip()
     except Exception as e:
         print(f"Error di worker OCR untuk halaman {nomor_halaman_asli}: {e}")
@@ -58,6 +62,7 @@ def ocr_satu_halaman_worker_paralel(nomor_halaman_asli: int, data_pixmap_bytes_p
 
 # Fungsi utama untuk mengekstrak teks dari berkas PDF dengan caching dan pemrosesan paralel
 def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
+                          mesin_ocr: str = 'tesseract', opsi_praproses: dict = None,
                           direktori_cache_kustom: str | None = None) -> str:
     """
     Mengekstrak teks dari berkas PDF dengan caching. Menggunakan ekstraksi teks langsung jika memungkinkan,
@@ -65,7 +70,9 @@ def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
 
     Args:
         path_file_pdf: Path berkas ke file .pdf.
-        fungsi_ocr_untuk_gambar: Fungsi callable untuk OCR gambar.
+        fungsi_ocr_untuk_gambar: Fungsi callable untuk OCR gambar (seharusnya parser_gambar.ekstrak_teks_dari_gambar).
+        mesin_ocr: Nama mesin OCR yang akan digunakan (misalnya, 'tesseract', 'easyocr').
+        opsi_praproses: Dictionary opsi pra-pemrosesan untuk diteruskan ke fungsi OCR gambar.
         direktori_cache_kustom: Path opsional ke direktori cache. Jika None, default dari utilitas_cache akan digunakan.
 
     Returns:
@@ -103,7 +110,13 @@ def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
             maks_worker = min(8, os.cpu_count() + 4 if os.cpu_count() else 4)
             with concurrent.futures.ThreadPoolExecutor(max_workers=maks_worker) as executor:
                 futures_ocr = [
-                    executor.submit(ocr_satu_halaman_worker_paralel, no_hlm, data_bytes, fungsi_ocr_untuk_gambar)
+                    executor.submit(ocr_satu_halaman_worker_paralel, 
+                                    no_hlm, 
+                                    data_bytes, 
+                                    fungsi_ocr_untuk_gambar,
+                                    mesin_ocr,      # Teruskan mesin_ocr
+                                    opsi_praproses  # Teruskan opsi_praproses
+                                   )
                     for no_hlm, data_bytes in halaman_perlu_ocr_data]
 
                 for future in concurrent.futures.as_completed(futures_ocr):
