@@ -37,8 +37,8 @@ def ekstrak_data_terstruktur_vision(image_path: str) -> list[dict]:
     load_dotenv()
     # extracted_data = [] # No longer a list of dicts, will be list of lines (strings)
     # Initialize lines list
-    lines_of_text = []
-    words_data = []  # Temporary list to store words before grouping
+    # lines_of_text = [] # Removed as per new requirement
+    words_data = []  # This will be the direct output
 
     credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     if credentials_path:
@@ -96,46 +96,8 @@ def ekstrak_data_terstruktur_vision(image_path: str) -> list[dict]:
                 return []
 
             print(f"INFO: Ekstraksi kata selesai. {len(words_data)} kata terdeteksi.")
-            print("INFO: Memulai pengelompokan kata menjadi baris...")
-
-            # Sort words: primarily by y_min, secondarily by x_min
-            words_data.sort(key=lambda w: (w['bounds'][1], w['bounds'][0]))
-
-            current_line_words = []
-            # Tolerance for y_min to group words into the same line.
-            # This might need adjustment based on typical document structures.
-            # A simple approach: use a fraction of the word's height or a fixed pixel value.
-            # Let's start with a fixed pixel tolerance.
-            Y_TOLERANCE = 10  # pixels - adjust as needed
-
-            for word_info in words_data:
-                word_text = word_info['text']
-                y_min = word_info['bounds'][1]
-                # y_max = word_info['bounds'][3] # Not used directly in this logic yet, but available
-
-                if not current_line_words:
-                    current_line_words.append(word_info)
-                else:
-                    # Check if the word belongs to the current line
-                    # Compare y_min of the current word with y_min of the first word in the current line
-                    # or average y_min/y_max of words in the current line.
-                    # For simplicity, let's use y_min of the last added word.
-                    last_word_in_line_y_min = current_line_words[-1]['bounds'][1]
-
-                    # A word is part of the current line if its y_min is close to the last word's y_min
-                    if abs(y_min - last_word_in_line_y_min) <= Y_TOLERANCE:
-                        current_line_words.append(word_info)
-                    else:
-                        # Start a new line
-                        # Concatenate text from the completed line
-                        lines_of_text.append(' '.join([w['text'] for w in current_line_words]))
-                        current_line_words = [word_info]
-
-            # Add the last processed line
-            if current_line_words:
-                lines_of_text.append(' '.join([w['text'] for w in current_line_words]))
-
-            print(f"INFO: Pengelompokan baris selesai. {len(lines_of_text)} baris terdeteksi.")
+            # Line grouping logic removed as per new requirements.
+            # The function will now return words_data directly.
 
         else:
             print("INFO: Tidak ada anotasi teks ditemukan dalam respons Vision API.")
@@ -150,7 +112,7 @@ def ekstrak_data_terstruktur_vision(image_path: str) -> list[dict]:
         # raise e
         return []  # Return empty list on other errors
 
-    return lines_of_text
+    return words_data
 
 DEFAULT_OPSI_PRAPROSES = {
     'dpi_target': 300,

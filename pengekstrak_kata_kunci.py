@@ -344,6 +344,28 @@ def ekstrak_data_keuangan_dari_struktur_vision(
     if not structured_ocr_data:
         return data_hasil_ekstraksi
 
+    # 1. Concatenate all text from structured_ocr_data
+    seluruh_teks = ""
+    if structured_ocr_data: # Memastikan structured_ocr_data tidak kosong
+        seluruh_teks = " ".join([item['text'] for item in structured_ocr_data if 'text' in item and item['text']])
+    
+    # 2. Perform case-insensitive check for "entitas induk" or "parent entity"
+    seluruh_teks_lower = seluruh_teks.lower()
+    frasa_kunci = ["entitas induk", "parent entity"]
+    ditemukan_frasa = False
+    for frasa in frasa_kunci:
+        if frasa.lower() in seluruh_teks_lower:
+            ditemukan_frasa = True
+            break
+            
+    # 3. Conditional Return
+    if not ditemukan_frasa:
+        print("INFO: Frasa 'entitas induk' atau 'parent entity' tidak ditemukan. Mengembalikan hasil kosong.")
+        return {}
+
+    # Jika frasa ditemukan, lanjutkan dengan logika ekstraksi yang ada
+    print("INFO: Frasa kunci ditemukan, melanjutkan ekstraksi data keuangan.")
+
     # Parameter untuk pencarian spasial
     MAX_HORIZONTAL_DISTANCE_FACTOR = 5  # Faktor pengali lebar kata kunci untuk jarak horizontal maksimal
     VERTICAL_ALIGNMENT_TOLERANCE_FACTOR = 0.7 # Faktor pengali tinggi kata kunci untuk toleransi alignment vertikal
@@ -390,6 +412,10 @@ def ekstrak_data_keuangan_dari_struktur_vision(
                     for j, struktur_item_value in enumerate(structured_ocr_data):
                         # Hindari memproses kata kunci itu sendiri sebagai nilai
                         if i <= j < i + jumlah_kata_variasi:
+                            continue
+
+                        # NEW: Skip if text is empty or only whitespace
+                        if not struktur_item_value['text'].strip():
                             continue
 
                         if not is_potentially_numeric(struktur_item_value['text']):
