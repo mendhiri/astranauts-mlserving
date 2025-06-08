@@ -87,18 +87,18 @@ inisialisasi_nltk_resources()
 # Definisi daftar kata kunci keuangan dalam Bahasa Indonesia
 DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     # ASTRA
-    {"kata_dasar": "Jumlah Aset Lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar"]},
-    {"kata_dasar": "Jumlah Aset Tidak Lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar"]},
-    {"kata_dasar": "Jumlah Aset", "variasi": ["Jumlah aset", "Total aset"]},
-    {"kata_dasar": "Jumlah Liabilitas Jangka Pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek"]},
-    {"kata_dasar": "Jumlah Liabilitas Jangka Panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang"]},
-    {"kata_dasar": "Jumlah Liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas"]},
-    {"kata_dasar": "Jumlah Ekuitas", "variasi": ["Jumlah ekuitas", "Total ekuitas"]},
-    {"kata_dasar": "Pendapatan Bersih", "variasi": ["Pendapatan bersih", "Penjualan bersih"]},
-    {"kata_dasar": "Beban Pokok Pendapatan", "variasi": ["Beban pokok pendapatan", "Harga pokok penjualan"]},
-    {"kata_dasar": "Laba Bruto", "variasi": ["Laba bruto", "Laba kotor"]},
-    {"kata_dasar": "Laba Sebelum Pajak Penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan"]},
-    {"kata_dasar": "Laba Tahun Berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan"]},
+    {"kata_dasar": "Jumlah aset lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar"]},
+    {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar"]},
+    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset"]},
+    {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek"]},
+    {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang"]},
+    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas"]},
+    {"kata_dasar": "Jumlah ekuitas", "variasi": ["Jumlah ekuitas", "Total ekuitas"]},
+    {"kata_dasar": "Pendapatan bersih", "variasi": ["Pendapatan bersih", "Penjualan bersih"]},
+    {"kata_dasar": "Beban pokok pendapatan", "variasi": ["Beban pokok pendapatan", "Harga pokok penjualan"]},
+    {"kata_dasar": "Laba bruto", "variasi": ["Laba bruto", "Laba kotor"]},
+    {"kata_dasar": "Laba sebelum pajak penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan"]},
+    {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan"]},
 
     # PROFITABILITY
     {"kata_dasar": "Margin Laba Bersih", "variasi": ["margin laba bersih", "net profit margin", "margin keuntungan bersih"]},
@@ -445,6 +445,130 @@ def ekstrak_data_keuangan_dari_struktur_vision(
             nilai_ditemukan_final_kedekatan = float('inf') 
 
     return data_hasil_ekstraksi
+
+
+# Fungsi helper untuk memeriksa apakah kata kunci lain ada di baris teks
+def is_another_keyword_present(line_text: str, current_kata_dasar: str, daftar_kata_kunci: list[dict]) -> bool:
+    """
+    Memeriksa apakah ada kata kunci (dari daftar_kata_kunci) yang BUKAN current_kata_dasar
+    terdapat dalam line_text.
+    """
+    for kw_info in daftar_kata_kunci:
+        if kw_info["kata_dasar"] == current_kata_dasar:
+            continue  # Lewati kata kunci saat ini
+        for v in kw_info["variasi"]:
+            if v.lower() in line_text.lower():
+                return True
+    return False
+
+
+def ekstrak_data_keuangan_dari_teks_ocr_refined(
+    ocr_text: str, 
+    daftar_kata_kunci: list[dict] | None = None
+) -> dict:
+    """
+    Mengekstrak data keuangan dari teks OCR mentah dengan logika pencarian yang lebih canggih.
+    Mencari nilai pada baris yang sama dengan kata kunci, atau pada baris-baris berikutnya,
+    dengan memperhatikan kemungkinan adanya kata kunci lain.
+
+    Args:
+        ocr_text: String teks hasil OCR.
+        daftar_kata_kunci: Daftar kata kunci untuk diekstrak. 
+                           Menggunakan DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT jika None.
+
+    Returns:
+        Dict berisi data keuangan yang diekstrak {kata_dasar: nilai}.
+    """
+    if daftar_kata_kunci is None:
+        daftar_kata_kunci = DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT
+    
+    extracted_data = {}
+    if not ocr_text or not isinstance(ocr_text, str):
+        return extracted_data
+
+    lines = [line.lower() for line in ocr_text.splitlines()]
+    MAX_LINES_TO_SEARCH_AFTER_KEYWORD = 5 # Batas pencarian ke bawah setelah kata kunci
+
+    for info_kata_kunci in daftar_kata_kunci:
+        kata_dasar_target = info_kata_kunci["kata_dasar"]
+        variasi_list = info_kata_kunci["variasi"]
+        nilai_ditemukan_untuk_kata_dasar = None
+
+        for variasi in variasi_list:
+            variasi_lower = variasi.lower()
+            
+            for line_index, line_content in enumerate(lines):
+                if variasi_lower in line_content:
+                    # Pastikan ini adalah match terbaik untuk spot ini, bukan bagian dari kata kunci yang lebih spesifik
+                    is_best_match_for_spot = True
+                    for other_info_kata_kunci in daftar_kata_kunci:
+                        for other_variasi in other_info_kata_kunci["variasi"]:
+                            other_variasi_lower = other_variasi.lower()
+                            # Jika variasi saat ini adalah substring dari variasi lain yang lebih spesifik,
+                            # DAN variasi yang lebih spesifik itu juga ada di baris ini,
+                            # maka ini bukan match terbaik.
+                            if variasi_lower != other_variasi_lower and \
+                               variasi_lower in other_variasi_lower and \
+                               other_variasi_lower in line_content:
+                                is_best_match_for_spot = False
+                                break
+                        if not is_best_match_for_spot:
+                            break
+                    
+                    if not is_best_match_for_spot:
+                        continue # Lanjut ke baris berikutnya, spot ini akan ditangani oleh kata kunci yang lebih spesifik
+
+                    # 1. Cari di baris yang sama
+                    try:
+                        # Ekstrak substring di sebelah kanan variasi
+                        start_index_after_variasi = line_content.find(variasi_lower) + len(variasi_lower)
+                        substring_kanan = line_content[start_index_after_variasi:]
+                        
+                        # Tokenisasi substring (sederhana, split by space)
+                        tokens_kanan = substring_kanan.split()
+                        for token in tokens_kanan:
+                            nilai_normal = normalisasi_nilai_keuangan(token)
+                            if nilai_normal is not None:
+                                nilai_ditemukan_untuk_kata_dasar = nilai_normal
+                                break # Ambil nilai pertama yang valid di baris yang sama
+                        
+                        if nilai_ditemukan_untuk_kata_dasar is not None:
+                            break # Keluar dari loop baris jika nilai ditemukan di baris yang sama
+
+                    except Exception: # Lanjutkan jika ada error dalam pemrosesan baris ini
+                        pass
+
+                    # 2. Jika tidak ditemukan di baris yang sama, cari di baris berikutnya
+                    if nilai_ditemukan_untuk_kata_dasar is None:
+                        for i in range(1, MAX_LINES_TO_SEARCH_AFTER_KEYWORD + 1):
+                            next_line_index = line_index + i
+                            if next_line_index < len(lines):
+                                current_search_line = lines[next_line_index].strip()
+                                
+                                # Periksa apakah ada kata kunci LAIN di baris ini
+                                if is_another_keyword_present(current_search_line, kata_dasar_target, daftar_kata_kunci):
+                                    break # Hentikan pencarian di baris berikutnya jika ada kata kunci lain
+
+                                tokens_search_line = current_search_line.split()
+                                for token in tokens_search_line:
+                                    nilai_normal = normalisasi_nilai_keuangan(token)
+                                    if nilai_normal is not None:
+                                        nilai_ditemukan_untuk_kata_dasar = nilai_normal
+                                        break # Ambil nilai pertama yang valid
+                                
+                                if nilai_ditemukan_untuk_kata_dasar is not None:
+                                    break # Keluar dari loop pencarian baris berikutnya
+                            else:
+                                break # Sudah mencapai akhir baris dokumen
+                
+                if nilai_ditemukan_untuk_kata_dasar is not None: # Jika sudah ketemu dari same line atau subsequent line search
+                    break # Keluar dari loop iterasi lines (line_index, line_content)
+            
+            if nilai_ditemukan_untuk_kata_dasar is not None:
+                extracted_data[kata_dasar_target] = nilai_ditemukan_untuk_kata_dasar
+                break # Keluar dari loop variasi, lanjut ke kata kunci berikutnya
+
+    return extracted_data
 
 
 def ekstrak_data_keuangan_tahunan(teks_dokumen: str, daftar_kata_kunci: list[dict] | None = None) -> dict:
