@@ -85,7 +85,6 @@ def inisialisasi_nltk_resources():
 inisialisasi_nltk_resources()
 
 # Definisi daftar kata kunci keuangan dalam Bahasa Indonesia
-# Definisi daftar kata kunci keuangan dalam Bahasa Indonesia
 DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     # ASTRA
     {"kata_dasar": "Jumlah Aset Lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar"]},
@@ -329,6 +328,7 @@ def ekstrak_data_keuangan_dari_struktur_vision(
 ) -> dict:
     """
     Mengekstrak data keuangan dari output terstruktur Google Vision API.
+    Diasumsikan data yang masuk sudah difilter untuk halaman "Entitas Induk".
 
     Args:
         structured_ocr_data: List dict {'text': 'word', 'bounds': [x_min, y_min, x_max, y_max]}.
@@ -341,30 +341,9 @@ def ekstrak_data_keuangan_dari_struktur_vision(
         daftar_kata_kunci = DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT
     
     data_hasil_ekstraksi = {}
-    if not structured_ocr_data:
+    if not structured_ocr_data: # Jika tidak ada data terstruktur, kembalikan hasil kosong
+        print("INFO: Tidak ada data OCR terstruktur yang diberikan ke ekstraktor.")
         return data_hasil_ekstraksi
-
-    # 1. Concatenate all text from structured_ocr_data
-    seluruh_teks = ""
-    if structured_ocr_data: # Memastikan structured_ocr_data tidak kosong
-        seluruh_teks = " ".join([item['text'] for item in structured_ocr_data if 'text' in item and item['text']])
-    
-    # 2. Perform case-insensitive check for "entitas induk" or "parent entity"
-    seluruh_teks_lower = seluruh_teks.lower()
-    frasa_kunci = ["entitas induk", "parent entity"]
-    ditemukan_frasa = False
-    for frasa in frasa_kunci:
-        if frasa.lower() in seluruh_teks_lower:
-            ditemukan_frasa = True
-            break
-            
-    # 3. Conditional Return
-    if not ditemukan_frasa:
-        print("INFO: Frasa 'entitas induk' atau 'parent entity' tidak ditemukan. Mengembalikan hasil kosong.")
-        return {}
-
-    # Jika frasa ditemukan, lanjutkan dengan logika ekstraksi yang ada
-    print("INFO: Frasa kunci ditemukan, melanjutkan ekstraksi data keuangan.")
 
     # Parameter untuk pencarian spasial
     MAX_HORIZONTAL_DISTANCE_FACTOR = 5  # Faktor pengali lebar kata kunci untuk jarak horizontal maksimal

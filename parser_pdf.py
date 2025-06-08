@@ -45,9 +45,15 @@ def ocr_satu_halaman_worker_paralel(nomor_halaman_asli: int, data_pixmap_bytes_p
         gambar_pil = Image.open(io.BytesIO(data_pixmap_bytes_png))
         gambar_pil.save(path_gambar_temporer_worker)
         # Panggil fungsi OCR dengan parameter tambahan
-        teks_hasil_ocr = fungsi_ocr_gambar(path_gambar_temporer_worker, 
-                                           mesin_ocr=mesin_ocr, 
-                                           opsi_praproses=opsi_praproses)
+        hasil_ocr_mentah = fungsi_ocr_gambar(path_gambar_temporer_worker, 
+                                             mesin_ocr=mesin_ocr, 
+                                             opsi_praproses=opsi_praproses)
+        
+        if isinstance(hasil_ocr_mentah, list):
+            teks_hasil_ocr = '\n'.join(hasil_ocr_mentah)
+        else:
+            teks_hasil_ocr = str(hasil_ocr_mentah) # Pastikan string jika bukan list
+
         return nomor_halaman_asli, teks_hasil_ocr.strip()
     except Exception as e:
         print(f"Error di worker OCR untuk halaman {nomor_halaman_asli}: {e}")
@@ -93,6 +99,15 @@ def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
     try:
         dokumen_pdf = pymupdf.open(path_file_pdf)
         jumlah_halaman = len(dokumen_pdf)
+        
+        # Helper function to check for keywords
+        def is_entitas_induk_page(page_text_content: str) -> bool:
+            if not page_text_content:
+                return False
+            # Check within the first 200 chars, case-insensitive
+            search_area = page_text_content[:200].lower()
+            return "entitas induk" in search_area or "parent entity" in search_area
+
         semua_bagian_teks = [None] * jumlah_halaman
         halaman_perlu_ocr_data = []
 
@@ -132,18 +147,28 @@ def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
                         # Atau, jika ada cara untuk mendapatkan argumen awal future, bisa digunakan.
                         # Dalam kasus ini, karena worker mengembalikan nomor halaman bahkan saat error, ini seharusnya aman.
 
-        teks_final_hasil_ekstraksi = []
-        for i, teks_bagian in enumerate(semua_bagian_teks):
-            if teks_bagian is None:
-                teks_final_hasil_ekstraksi.append(f"[Error: Halaman {i + 1} PDF tidak dapat diproses]")
-            else:
-                teks_final_hasil_ekstraksi.append(teks_bagian)
+        # NEW FILTERING LOGIC STARTS HERE
+        teks_final_dari_entitas_induk_saja = []
+        for i, teks_halaman_tunggal in enumerate(semua_bagian_teks):
+            if teks_halaman_tunggal is None:
+                # print(f"Peringatan: Halaman {i + 1} PDF tidak memiliki konten setelah diproses.")
+                continue # Skip pages with no content
 
-        hasil_gabungan = "\n\n".join(teks_final_hasil_ekstraksi)
+            if is_entitas_induk_page(teks_halaman_tunggal):
+                teks_final_dari_entitas_induk_saja.append(teks_halaman_tunggal)
+            # else:
+                # print(f"INFO: Halaman {i+1} dilewati karena bukan 'Entitas Induk'.")
 
-        # Simpan hasil ke cache
-        if kunci_cache_dokumen:  # Pastikan kunci ada
-            print(f"Menyimpan hasil ke cache untuk: {os.path.basename(path_file_pdf)}")
+        # If no "Entitas Induk" pages found, return empty string
+        if not teks_final_dari_entitas_induk_saja:
+            print(f"INFO: Tidak ada halaman 'Entitas Induk' yang ditemukan dalam {os.path.basename(path_file_pdf)}.")
+            hasil_gabungan = "" 
+        else:
+            hasil_gabungan = "\n\n".join(teks_final_dari_entitas_induk_saja)
+
+        # Simpan hasil ke cache (either combined "Entitas Induk" text or empty string)
+        if kunci_cache_dokumen:
+            print(f"Menyimpan hasil (hanya Entitas Induk atau kosong) ke cache untuk: {os.path.basename(path_file_pdf)}")
             data_untuk_disimpan = {'teks_dokumen': hasil_gabungan, 'timestamp_pembuatan_cache': time.time()}
             simpan_ke_cache(kunci_cache_dokumen, data_untuk_disimpan, direktori_cache_kustom)
 
