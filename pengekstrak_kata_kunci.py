@@ -99,6 +99,14 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "Laba bruto", "variasi": ["Laba bruto", "Laba kotor"]},
     {"kata_dasar": "Laba sebelum pajak penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan"]},
     {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan"]},
+    {"kata_dasar": "Beban penjualan", "variasi": ["Beban penjualan"]},
+    {"kata_dasar": "Beban umum dan administrasi", "variasi": ["Beban umum dan administrasi"]},
+    {"kata_dasar": "Penghasilan bunga", "variasi": ["Penghasilan bunga"]},
+    {"kata_dasar": "Biaya keuangan", "variasi": ["Biaya keuangan"]},
+    {"kata_dasar": "Keuntungan selisih kurs, bersih", "variasi": ["Keuntungan selisih kurs, bersih", "Keuntungan selisih kurs bersih"]},
+    {"kata_dasar": "Penghasilan dividen", "variasi": ["Penghasilan dividen"]},
+    {"kata_dasar": "Penghasilan lain-lain, bersih", "variasi": ["Penghasilan lain-lain, bersih", "Penghasilan lain lain bersih"]},
+    {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan"]},
 
     # PROFITABILITY
     {"kata_dasar": "Margin Laba Bersih", "variasi": ["margin laba bersih", "net profit margin", "margin keuntungan bersih"]},
@@ -492,21 +500,23 @@ def ekstrak_data_keuangan_dari_teks_ocr_refined(
     for info_kata_kunci in daftar_kata_kunci:
         kata_dasar_target = info_kata_kunci["kata_dasar"]
         variasi_list = info_kata_kunci["variasi"]
-        nilai_ditemukan_untuk_kata_dasar = None
+        list_of_values_found = [] # Initialize for each new keyword
 
         for variasi in variasi_list:
+            if len(list_of_values_found) >= 2:
+                break # Found two values from a previous variation of the same base keyword
+            
             variasi_lower = variasi.lower()
             
             for line_index, line_content in enumerate(lines):
+                if len(list_of_values_found) >= 2:
+                    break # Already found two values for this kata_dasar_target
+
                 if variasi_lower in line_content:
-                    # Pastikan ini adalah match terbaik untuk spot ini, bukan bagian dari kata kunci yang lebih spesifik
                     is_best_match_for_spot = True
                     for other_info_kata_kunci in daftar_kata_kunci:
                         for other_variasi in other_info_kata_kunci["variasi"]:
                             other_variasi_lower = other_variasi.lower()
-                            # Jika variasi saat ini adalah substring dari variasi lain yang lebih spesifik,
-                            # DAN variasi yang lebih spesifik itu juga ada di baris ini,
-                            # maka ini bukan match terbaik.
                             if variasi_lower != other_variasi_lower and \
                                variasi_lower in other_variasi_lower and \
                                other_variasi_lower in line_content:
@@ -516,57 +526,68 @@ def ekstrak_data_keuangan_dari_teks_ocr_refined(
                             break
                     
                     if not is_best_match_for_spot:
-                        continue # Lanjut ke baris berikutnya, spot ini akan ditangani oleh kata kunci yang lebih spesifik
+                        continue
 
-                    # 1. Cari di baris yang sama
+                    # 1. Search on the same line
                     try:
-                        # Ekstrak substring di sebelah kanan variasi
                         start_index_after_variasi = line_content.find(variasi_lower) + len(variasi_lower)
                         substring_kanan = line_content[start_index_after_variasi:]
-                        
-                        # Tokenisasi substring (sederhana, split by space)
                         tokens_kanan = substring_kanan.split()
+                        
                         for token in tokens_kanan:
+                            if len(list_of_values_found) >= 2:
+                                break
                             nilai_normal = normalisasi_nilai_keuangan(token)
                             if nilai_normal is not None:
-                                nilai_ditemukan_untuk_kata_dasar = nilai_normal
-                                break # Ambil nilai pertama yang valid di baris yang sama
+                                list_of_values_found.append(nilai_normal)
                         
-                        if nilai_ditemukan_untuk_kata_dasar is not None:
-                            break # Keluar dari loop baris jika nilai ditemukan di baris yang sama
+                        # No need to break here from the line_index loop, 
+                        # as we might find more values on subsequent lines for the same keyword instance
+                        # if we haven't found two yet.
 
-                    except Exception: # Lanjutkan jika ada error dalam pemrosesan baris ini
-                        pass
+                    except Exception:
+                        pass # Continue if any error in processing this part of the line
 
-                    # 2. Jika tidak ditemukan di baris yang sama, cari di baris berikutnya
-                    if nilai_ditemukan_untuk_kata_dasar is None:
+                    # 2. Search on subsequent lines (if len(list_of_values_found) < 2)
+                    if len(list_of_values_found) < 2:
                         for i in range(1, MAX_LINES_TO_SEARCH_AFTER_KEYWORD + 1):
+                            if len(list_of_values_found) >= 2:
+                                break 
+                            
                             next_line_index = line_index + i
                             if next_line_index < len(lines):
                                 current_search_line = lines[next_line_index].strip()
                                 
-                                # Periksa apakah ada kata kunci LAIN di baris ini
+                                if not current_search_line: # Skip empty lines
+                                    continue
+                                
                                 if is_another_keyword_present(current_search_line, kata_dasar_target, daftar_kata_kunci):
-                                    break # Hentikan pencarian di baris berikutnya jika ada kata kunci lain
+                                    break # Stop downward search for this keyword instance
 
                                 tokens_search_line = current_search_line.split()
                                 for token in tokens_search_line:
+                                    if len(list_of_values_found) >= 2:
+                                        break
                                     nilai_normal = normalisasi_nilai_keuangan(token)
                                     if nilai_normal is not None:
-                                        nilai_ditemukan_untuk_kata_dasar = nilai_normal
-                                        break # Ambil nilai pertama yang valid
+                                        list_of_values_found.append(nilai_normal)
                                 
-                                if nilai_ditemukan_untuk_kata_dasar is not None:
-                                    break # Keluar dari loop pencarian baris berikutnya
+                                if len(list_of_values_found) >= 2: # Break from searching more lines
+                                    break 
                             else:
-                                break # Sudah mencapai akhir baris dokumen
+                                break # End of document lines
                 
-                if nilai_ditemukan_untuk_kata_dasar is not None: # Jika sudah ketemu dari same line atau subsequent line search
-                    break # Keluar dari loop iterasi lines (line_index, line_content)
-            
-            if nilai_ditemukan_untuk_kata_dasar is not None:
-                extracted_data[kata_dasar_target] = nilai_ditemukan_untuk_kata_dasar
-                break # Keluar dari loop variasi, lanjut ke kata kunci berikutnya
+                if len(list_of_values_found) >= 2:
+                     break # Break from iterating lines for current variasi if 2 values found
+
+            if len(list_of_values_found) >= 2:
+                break # Break from iterating variasi_list if 2 values found for kata_dasar_target
+        
+        # After iterating through variations and lines for a kata_dasar_target:
+        if list_of_values_found:
+            val1 = list_of_values_found[0]
+            val2 = list_of_values_found[1] if len(list_of_values_found) > 1 else None
+            extracted_data[kata_dasar_target] = {'val1': val1, 'val2': val2}
 
     return extracted_data
 
