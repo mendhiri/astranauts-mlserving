@@ -89,7 +89,6 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     # ASTRA
     {"kata_dasar": "Jumlah aset lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar"]},
     {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar"]},
-    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset"]},
     {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek"]},
     {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang"]},
     {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas"]},

@@ -1,0 +1,12 @@
+easyocr==1.7.2
+nltk==3.9.1
+numpy==2.3.0
+opencv_python==4.11.0.86
+opencv_python_headless==4.11.0.86
+Pillow==11.2.1
+protobuf==6.31.1
+pymupdf==1.26.0
+pyocr==0.8.5
+pytesseract==0.3.13
+python-dotenv==1.1.0
+python_docx==1.1.2

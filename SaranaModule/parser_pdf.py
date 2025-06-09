@@ -9,7 +9,7 @@ import uuid  # Untuk nama file temporer unik
 import time  # Untuk timestamp pada data cache
 
 # Impor fungsi-fungsi cache dari utilitas_cache.py
-from utilitas_cache import buat_kunci_cache_file, simpan_ke_cache, ambil_dari_cache
+from SaranaModule.utilitas_cache import buat_kunci_cache_file, simpan_ke_cache, ambil_dari_cache
 
 # Usahakan impor dari parser_gambar.py lokal
 try:
