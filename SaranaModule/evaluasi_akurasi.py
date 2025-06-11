@@ -219,6 +219,10 @@ def compare_results(extracted_data_list, ground_truth_dir_path):
     
     all_processed_keywords = set() # Keep track of all keywords encountered for comprehensive final reporting
 
+    # Initialize counters for overall aggregate accuracy
+    total_ground_truth_keywords = 0
+    total_correctly_extracted_with_correct_values = 0
+
     for item_ekstraksi in extracted_data_list:
         if not isinstance(item_ekstraksi, dict):
             print(f"Peringatan: Melewati item ekstraksi (bukan dictionary): {item_ekstraksi}")
@@ -281,6 +285,7 @@ def compare_results(extracted_data_list, ground_truth_dir_path):
 
         # Iterate through ground truth keys for TP and FN for *this file*
         for kata_kunci_gt, nilai_gt in current_file_gt_dict.items():
+            total_ground_truth_keywords += 1 # Increment for each GT keyword
             keyword_ground_truth_occurrences[kata_kunci_gt] += 1 
             nilai_ekstrak = hasil_ekstraksi_dokumen.get(kata_kunci_gt)
             
@@ -293,6 +298,7 @@ def compare_results(extracted_data_list, ground_truth_dir_path):
                 
                 if nilai_gt is not None and nilai_ekstrak == nilai_gt: # Exact value match
                     exact_match_counts[kata_kunci_gt] += 1
+                    total_correctly_extracted_with_correct_values += 1 # Increment for correct value match
                 
                 is_nilai_gt_numeric = isinstance(nilai_gt, (int, float))
                 is_nilai_ekstrak_numeric = isinstance(nilai_ekstrak, (int, float))
@@ -366,6 +372,18 @@ def compare_results(extracted_data_list, ground_truth_dir_path):
         final_metrics[k]['tp'] = tp
         final_metrics[k]['fp'] = fp
         final_metrics[k]['fn'] = fn
+    
+    # Calculate and store overall aggregate accuracy
+    if total_ground_truth_keywords == 0:
+        aggregate_accuracy_percentage = 0.0 # Or 'N/A' if preferred, but float is better for consistency
+    else:
+        aggregate_accuracy_percentage = (total_correctly_extracted_with_correct_values / total_ground_truth_keywords) * 100
+    
+    final_metrics['overall_aggregate_accuracy'] = {
+        'accuracy_percentage': aggregate_accuracy_percentage,
+        'total_ground_truth_keywords': total_ground_truth_keywords,
+        'total_correctly_extracted_with_correct_values': total_correctly_extracted_with_correct_values
+    }
         
     return final_metrics
 

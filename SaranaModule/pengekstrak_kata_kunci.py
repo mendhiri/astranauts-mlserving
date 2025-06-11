@@ -620,7 +620,11 @@ def ekstrak_data_keuangan_dari_teks_ocr_refined(
     if not ocr_text or not isinstance(ocr_text, str):
         return extracted_data
 
-    lines = [line.lower() for line in ocr_text.splitlines()]
+    # Normalisasi teks OCR
+    ocr_text = ocr_text.replace("\n", " ")
+    ocr_text = re.sub(r"\s+", " ", ocr_text).strip() # Tambahkan strip() untuk menghapus spasi di awal/akhir
+
+    lines = [line.lower() for line in ocr_text.splitlines() if line.strip()] # Pastikan tidak ada baris kosong setelah split
     MAX_LINES_TO_SEARCH_AFTER_KEYWORD = 5 # Batas pencarian ke bawah setelah kata kunci
 
     for info_kata_kunci in daftar_kata_kunci:
@@ -732,8 +736,13 @@ def ekstrak_data_keuangan_tahunan(
     if not teks_dokumen or not isinstance(teks_dokumen, str):
         return data_hasil_ekstraksi
 
+    # Normalisasi teks dokumen
+    teks_dokumen = teks_dokumen.replace("\n", " ")
+    teks_dokumen = re.sub(r"\s+", " ", teks_dokumen).strip() # Tambahkan strip() untuk menghapus spasi di awal/akhir
+
     # Pre-process lines: lowercase and strip whitespace
-    lines = [line.strip() for line in teks_dokumen.lower().splitlines()]
+    # Pastikan tidak ada baris kosong setelah split, karena teks_dokumen kini satu baris panjang
+    lines = [line.strip() for line in teks_dokumen.lower().splitlines() if line.strip()] 
     
     # tahun_pelaporan = identifikasi_tahun_pelaporan(teks_dokumen) # Not used for value selection yet
 

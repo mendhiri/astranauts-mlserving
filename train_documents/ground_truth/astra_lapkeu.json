@@ -2,11 +2,9 @@
   "nama_file": "astra_lapkeu.pdf",
   "ground_truth_data": {
     "Jumlah aset lancar": 19238000000000.0,
-    "Jumlah aset tidak lancar": 81765000000000.0, 
-    "Jumlah aset": 10100300000000.0,
-    "Jumlah liabilitas jangka pendek": 1430000000000.0,
+    "Jumlah aset tidak lancar": 81765000000000.0,
+    "Jumlah liabilitas jangka pendek": 14300000000000.0,
     "Jumlah liabilitas jangka panjang": 1989000000000.0,
-    "Jumlah liabilitas": 16289000000000.0,
     "Jumlah ekuitas": 84714000000000.0,
     "Jumlah liabilitas dan ekuitas": 101003000000000.0,
     "Pendapatan bersih": 108249000000000.0,
