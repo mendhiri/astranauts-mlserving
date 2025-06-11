@@ -86,27 +86,24 @@ inisialisasi_nltk_resources()
 
 # Definisi daftar kata kunci keuangan dalam Bahasa Indonesia
 DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
-    # ASTRA
-    {"kata_dasar": "Jumlah aset lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar"]},
-    {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar"]},
-    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset"]},
-    {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek"]},
-    {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang"]},
-    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas"]},
-    {"kata_dasar": "Jumlah ekuitas", "variasi": ["Jumlah ekuitas", "Total ekuitas"]},
-    {"kata_dasar": "Pendapatan bersih", "variasi": ["Pendapatan bersih", "Penjualan bersih"]},
-    {"kata_dasar": "Beban pokok pendapatan", "variasi": ["Beban pokok pendapatan", "Harga pokok penjualan"]},
-    {"kata_dasar": "Laba bruto", "variasi": ["Laba bruto", "Laba kotor"]},
-    {"kata_dasar": "Laba sebelum pajak penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan"]},
-    {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan"]},
-    {"kata_dasar": "Beban penjualan", "variasi": ["Beban penjualan"]},
-    {"kata_dasar": "Beban umum dan administrasi", "variasi": ["Beban umum dan administrasi"]},
-    {"kata_dasar": "Penghasilan bunga", "variasi": ["Penghasilan bunga"]},
-    {"kata_dasar": "Biaya keuangan", "variasi": ["Biaya keuangan"]},
-    {"kata_dasar": "Keuntungan selisih kurs, bersih", "variasi": ["Keuntungan selisih kurs, bersih", "Keuntungan selisih kurs bersih"]},
-    {"kata_dasar": "Penghasilan dividen", "variasi": ["Penghasilan dividen"]},
-    {"kata_dasar": "Penghasilan lain-lain, bersih", "variasi": ["Penghasilan lain-lain, bersih", "Penghasilan lain lain bersih"]},
-    {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan"]},
+    # ASET 
+    {"kata_dasar": "Jumlah aset lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar", "Aset lancar"]},
+    {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar", "Aset tidak lancar"]},
+    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset", "Aset"]},
+    {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek", "Liabilitas jangka pendek"]},
+    {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang", "Liabilitas jangka panjang"]},
+    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas", "Liabilitas"]},
+    {"kata_dasar": "Jumlah ekuitas", "variasi": ["Jumlah ekuitas", "Total ekuitas", "Ekuitas"]},
+    {"kata_dasar": "Jumlah liabilitas dan ekuitas", "variasi": ["Jumlah liabilitas dan ekuitas", "Total liabilitas dan ekuitas", "Liabilitas dan ekuitas"]},
+    {"kata_dasar": "Pendapatan bersih", "variasi": ["Pendapatan bersih", "Penjualan bersih", "Total pendapatan", "Total penjualan"]},
+    {"kata_dasar": "Beban pokok pendapatan", "variasi": ["Beban pokok pendapatan", "Harga pokok penjualan", "Hpp"]},
+    {"kata_dasar": "Laba bruto", "variasi": ["Laba bruto", "Laba kotor", "Gross profit"]},
+    {"kata_dasar": "Laba sebelum pajak penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan", "Laba sebelum pajak", "Laba sebelum pajak penghasilan dan beban pajak"]},
+    {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan", "Pajak penghasilan", "Tax expense"]},
+    {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan", "Laba bersih", "Net income", "Laba periode berjalan"]},
+    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas operasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas operasi", "Arus kas operasi", "Arus kas dari aktivitas operasi", "Arus kas operasi bersih"]},
+    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas investasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas investasi", "Arus kas investasi", "Arus kas dari aktivitas investasi", "Arus kas investasi bersih"]},
+    {"kata_dasar": "Arus kas bersih yang digunakan untuk aktivitas pendanaan", "variasi": ["Arus kas bersih yang digunakan untuk aktivitas pendanaan", "Arus kas pendanaan", "Arus kas dari aktivitas pendanaan", "Arus kas pendanaan bersih"]},
 
     # # PROFITABILITY
     # {"kata_dasar": "Margin Laba Bersih", "variasi": ["margin laba bersih", "net profit margin", "margin keuntungan bersih"]},
@@ -216,51 +213,136 @@ def normalisasi_nilai_keuangan(string_nilai: str) -> float | None:
     """
     Mengonversi string angka keuangan (misal "Rp1.234.567,89") ke float.
     Menangani format Indonesia dan tanda kurung untuk negatif.
-    Tidak lagi menangani satuan (ribu, juta, dll.) di sini.
+    Handles various formats of thousand and decimal separators.
+    Tidak lagi menangani satuan (ribu, juta, dll.) secara eksplisit di sini,
+    tapi pembersihan awal dilakukan.
     """
     if not string_nilai or not isinstance(string_nilai, str):
         return None
 
-    nilai_str_bersih = string_nilai.lower()
+    nilai_str_bersih = str(string_nilai).lower() # Ensure it's a string
     # Hapus "rp" dan spasi di awal/akhir
     nilai_str_bersih = nilai_str_bersih.replace("rp", "").strip()
 
-    # Hapus kata-kata satuan umum jika masih ada (sebagai tindakan pencegahan,
-    # seharusnya ini tidak terlalu banyak mempengaruhi karena pencarian utama satuan ada di deteksi_pengali_global)
+    # Hapus kata-kata satuan umum (sebagai tindakan pencegahan)
     # Ini penting agar tidak mengganggu konversi ke float jika satuan tidak sengaja tertinggal.
+    # Loop ini sebaiknya ada, meskipun deteksi_pengali_global juga ada.
     for satuan_kata in ["ribu", "juta", "miliar", "milyar", "triliun", "trilyun"]:
-        nilai_str_bersih = nilai_str_bersih.replace(satuan_kata, "").strip()
+        # Tambahkan spasi sebelum satuan_kata untuk menghindari penggantian dalam kata lain
+        # dan pastikan .strip() setelahnya.
+        nilai_str_bersih = re.sub(r'\b' + re.escape(satuan_kata) + r'\b', '', nilai_str_bersih).strip()
         
     # Penanganan angka negatif dalam tanda kurung
     negatif = False
     if nilai_str_bersih.startswith("(") and nilai_str_bersih.endswith(")"):
         negatif = True
-        nilai_str_bersih = nilai_str_bersih[1:-1].strip() # Hapus kurung dan spasi ekstra
+        nilai_str_bersih = nilai_str_bersih[1:-1].strip()
 
-    # Standarisasi: hapus titik (pemisah ribuan Indonesia), ganti koma (pemisah desimal Indonesia) dengan titik
-    nilai_str_bersih = nilai_str_bersih.replace(".", "")  # Hapus pemisah ribuan (titik)
-    nilai_str_bersih = nilai_str_bersih.replace(",", ".")  # Ganti pemisah desimal (koma) dengan titik
+    # Deteksi pemisah
+    num_dots = nilai_str_bersih.count('.')
+    num_commas = nilai_str_bersih.count(',')
 
-    # Hapus karakter non-numerik yang mungkin masih tersisa selain titik desimal dan tanda minus (jika ada)
-    # Pastikan tanda minus di awal (jika ada setelah pembersihan kurung) tetap ada.
-    # Regex ini mengizinkan angka, satu titik desimal, dan satu tanda minus di awal.
-    # Ini sedikit lebih permisif dan mengandalkan float() untuk validasi akhir.
-    # Hapus semua karakter kecuali digit, titik desimal, dan tanda minus di awal.
-    # Pertama, bersihkan semua yang bukan digit, titik, atau minus.
-    nilai_str_bersih = re.sub(r"[^\d.-]", "", nilai_str_bersih)
+    # Kasus 1: Ada koma dan titik (misal, "1.234,56" atau "1,234.56")
+    if num_dots > 0 and num_commas > 0:
+        # Asumsi: jika ada koma dan titik, salah satunya adalah pemisah desimal, yang lain ribuan.
+        # Jika koma terakhir: format Indonesia "1.234,56"
+        if nilai_str_bersih.rfind(',') > nilai_str_bersih.rfind('.'):
+            nilai_str_bersih = nilai_str_bersih.replace(".", "")  # Hapus titik (ribuan)
+            nilai_str_bersih = nilai_str_bersih.replace(",", ".")  # Koma jadi desimal
+        # Jika titik terakhir: format US/UK "1,234.56"
+        else:
+            nilai_str_bersih = nilai_str_bersih.replace(",", "")  # Hapus koma (ribuan)
+            # Titik sudah menjadi pemisah desimal
+    # Kasus 2: Hanya ada koma (misal, "1,234" atau "1,234,567")
+    elif num_commas > 0 and num_dots == 0:
+        # Jika lebih dari satu koma, atau satu koma tapi diikuti >3 digit setelahnya (heuristic),
+        # anggap koma sebagai pemisah ribuan. Contoh "1,234" atau "1,234,567".
+        # Untuk "19,238" (kasus dari issue), ini akan menghapus koma.
+        # Untuk "19,2" (sembilan belas koma dua), ini juga akan menghapus koma jika tidak hati-hati.
+        # Perlu diperbaiki: jika ada satu koma dan setelah koma ada <= 3 digit yang bukan semua nol,
+        # itu bisa jadi desimal.
+        # Contoh: "19,238" -> 19238. "19,2" -> 19.2. "19,000" -> 19000
+        
+        parts = nilai_str_bersih.split(',')
+        if len(parts) > 1: # Ada koma
+            # Jika bagian terakhir setelah koma adalah 3 digit DAN ada lebih dari satu koma (e.g., 1,234,567)
+            # ATAU jika bagian terakhir BUKAN 3 digit (e.g. 1,2 or 1,23 or 1,2345)
+            # ini menunjukkan koma bisa jadi desimal atau ribuan.
+            # Aturan sederhana: jika ada koma, dan bagian setelah koma terakhir BUKAN persis 3 digit,
+            # maka koma itu adalah desimal.
+            # Jika bagian setelah koma terakhir ADALAH 3 digit, dan ada koma lain sebelumnya, itu ribuan.
+            # Jika hanya satu koma dan diikuti 3 digit, ini ambigu. "19,238". Sesuai issue, ini ribuan.
+            
+            # Strategi baru untuk Kasus 2 (hanya koma):
+            # Jika ada lebih dari satu koma, semua adalah pemisah ribuan.
+            if num_commas > 1:
+                nilai_str_bersih = nilai_str_bersih.replace(",", "")
+            else: # Hanya satu koma
+                # Periksa jumlah digit setelah koma.
+                # Jika "12,345" (kasus issue), ini adalah ribuan.
+                # Jika "12,3" atau "12,34", ini adalah desimal.
+                # Jika "12,3456", ini desimal (non-standar, tapi float() akan handle).
+                last_segment = parts[-1]
+                # Jika segmen terakhir BUKAN 3 digit, maka koma adalah desimal.
+                # Atau jika segmen terakhir adalah 3 digit tapi tidak ada segmen lain sebelumnya (misal ",123" tidak valid)
+                if len(last_segment) != 3 or len(parts) == 1: # e.g. "12,3" or "12,34" or "12,3456"
+                    nilai_str_bersih = nilai_str_bersih.replace(",", ".")
+                else: # e.g. "12,345" or "123,456" (jika num_commas > 1 sudah ditangani)
+                      # Ini berarti satu koma diikuti 3 digit -> ribuan. "19,238"
+                    nilai_str_bersih = nilai_str_bersih.replace(",", "")
+        # else: tidak ada koma, tidak perlu apa-apa
+            
+    # Kasus 3: Hanya ada titik (misal, "1.234" atau "1.234.567" atau "123.45")
+    elif num_dots > 0 and num_commas == 0:
+        # Jika lebih dari satu titik, semua adalah pemisah ribuan.
+        if num_dots > 1:
+            nilai_str_bersih = nilai_str_bersih.replace(".", "")
+        # Jika hanya satu titik, itu adalah pemisah desimal (misal, "123.45"). Tidak perlu diubah.
+        # "1234" (tanpa titik) juga tidak perlu diubah.
+        # "1.234" (satu titik, diikuti 3 digit). Ini adalah ribuan menurut konvensi umum Eropa.
+        # Namun, float("1.234") di Python adalah 1.234.
+        # Agar konsisten dengan "19,238" (ribuan), maka "1.234" juga harus jadi 1234.
+        parts = nilai_str_bersih.split('.')
+        if num_dots == 1 and len(parts[-1]) == 3 and len(parts[0]) > 0 : # e.g. "1.234", "12.345"
+             # Cek apakah bagian pertama bukan kosong, misal ".234" bukan ribuan
+            is_thousand_separator_candidate = True
+            # Heuristik tambahan: jika setelah titik ada non-digit, mungkin ini bukan ribuan "version1.222"
+            if not parts[-1].isdigit() or not parts[0].isdigit(): # memastikan kedua sisi adalah angka
+                 is_thousand_separator_candidate = False
 
-    # Jika ada beberapa tanda minus atau titik, float() akan gagal, yang kita tangkap di try-except.
-    # Contoh: "1.2.3" atau "--5" akan gagal. " -5 " menjadi "-5".
+            if is_thousand_separator_candidate:
+                nilai_str_bersih = nilai_str_bersih.replace(".", "") # Anggap ribuan
+            # else: biarkan sebagai desimal, contoh "123.4" atau "file.ext" (akan gagal nanti)
+        # Jika num_dots > 1, sudah dihapus. Jika num_dots == 1 dan bukan format ribuan X.YYY, biarkan.
 
-    if not nilai_str_bersih:  # Jika string menjadi kosong setelah pembersihan
+    # Setelah normalisasi separator, bersihkan karakter non-numerik yang mungkin masih tersisa
+    # (selain titik desimal dan tanda minus di awal).
+    # Regex ini mengizinkan angka, satu titik desimal opsional, dan satu tanda minus opsional di awal.
+    # Pertama, simpan tanda minus jika ada di awal
+    awal_minus = False
+    if nilai_str_bersih.startswith('-'):
+        awal_minus = True
+        nilai_str_bersih = nilai_str_bersih[1:]
+
+    # Hapus semua karakter yang bukan digit atau titik desimal tunggal
+    nilai_str_bersih = re.sub(r"[^\d.]", "", nilai_str_bersih)
+    
+    # Jika ada lebih dari satu titik setelah pembersihan di atas, itu error, float() akan gagal.
+    # Contoh: jika input "1.2.3.abc" -> "1.2.3" -> float() gagal.
+    # Jika input "abc.def" -> "." -> float() gagal.
+
+    if awal_minus:
+        nilai_str_bersih = "-" + nilai_str_bersih
+
+    if not nilai_str_bersih or nilai_str_bersih == "-": # Jika string menjadi kosong atau hanya "-"
         return None
 
     try:
         nilai_float = float(nilai_str_bersih)
-        # Pengali tidak lagi diterapkan di sini
-        return -nilai_float if negatif and nilai_float >= 0 else nilai_float # Pastikan negatif diterapkan dengan benar
+        return -nilai_float if negatif and nilai_float >= 0 else nilai_float
     except ValueError:
-        return None  # Gagal konversi ke float
+        # print(f"DEBUG: Gagal konversi ke float: '{string_nilai}' -> '{original_cleaned_string_for_debug}' -> '{nilai_str_bersih}'")
+        return None
 
 
 # Fungsi untuk mengidentifikasi tahun pelaporan dari teks
