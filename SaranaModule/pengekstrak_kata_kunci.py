@@ -99,9 +99,9 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "Laba sebelum pajak penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan", "Laba sebelum pajak", "Laba sebelum pajak penghasilan dan beban pajak"]},
     {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan", "Pajak penghasilan", "Tax expense"]},
     {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan", "Laba bersih", "Net income", "Laba periode berjalan"]},
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas operasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas operasi", "Arus kas operasi", "Arus kas dari aktivitas operasi", "Arus kas operasi bersih"]},
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas investasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas investasi", "Arus kas investasi", "Arus kas dari aktivitas investasi", "Arus kas investasi bersih"]},
-    {"kata_dasar": "Arus kas bersih yang digunakan untuk aktivitas pendanaan", "variasi": ["Arus kas bersih yang digunakan untuk aktivitas pendanaan", "Arus kas pendanaan", "Arus kas dari aktivitas pendanaan", "Arus kas pendanaan bersih"]},
+    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas operasi", "variasi": ["Arus kas bersih yang diperoleh dari", "Arus kas operasi bersih"]},
+    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas investasi", "variasi": ["Arus kas bersih yang diperoleh dari", "Arus kas investasi bersih"]},
+    {"kata_dasar": "Arus kas bersih yang digunakan untuk aktivitas pendanaan", "variasi": ["Arus kas bersih yang digunakan untuk", "Arus kas pendanaan bersih"]},
 
     # # PROFITABILITY
     # {"kata_dasar": "Margin Laba Bersih", "variasi": ["margin laba bersih", "net profit margin", "margin keuntungan bersih"]},
