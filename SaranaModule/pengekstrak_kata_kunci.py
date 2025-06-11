@@ -89,6 +89,7 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     # ASTRA
     {"kata_dasar": "Jumlah aset lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar"]},
     {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar"]},
+    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset"]},
     {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek"]},
     {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang"]},
     {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas"]},
@@ -107,68 +108,68 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "Penghasilan lain-lain, bersih", "variasi": ["Penghasilan lain-lain, bersih", "Penghasilan lain lain bersih"]},
     {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan"]},
 
-    # PROFITABILITY
-    {"kata_dasar": "Margin Laba Bersih", "variasi": ["margin laba bersih", "net profit margin", "margin keuntungan bersih"]},
-    {"kata_dasar": "Margin Operasi", "variasi": ["margin operasi", "operating margin", "ebit margin", "margin ebit"]},
-    {"kata_dasar": "Return on Assets", "variasi": ["return on assets", "roa", "pengembalian atas aset", "rasio pengembalian aset"]},
-    {"kata_dasar": "Return on Equity", "variasi": ["return on equity", "roe", "pengembalian atas ekuitas", "rasio pengembalian ekuitas"]},
-    {"kata_dasar": "Margin EBITDA", "variasi": ["margin ebitda", "ebitda margin", "margin laba sebelum bunga pajak dan depresiasi"]},
+    # # PROFITABILITY
+    # {"kata_dasar": "Margin Laba Bersih", "variasi": ["margin laba bersih", "net profit margin", "margin keuntungan bersih"]},
+    # {"kata_dasar": "Margin Operasi", "variasi": ["margin operasi", "operating margin", "ebit margin", "margin ebit"]},
+    # {"kata_dasar": "Return on Assets", "variasi": ["return on assets", "roa", "pengembalian atas aset", "rasio pengembalian aset"]},
+    # {"kata_dasar": "Return on Equity", "variasi": ["return on equity", "roe", "pengembalian atas ekuitas", "rasio pengembalian ekuitas"]},
+    # {"kata_dasar": "Margin EBITDA", "variasi": ["margin ebitda", "ebitda margin", "margin laba sebelum bunga pajak dan depresiasi"]},
 
-    # LIQUIDITY
-    {"kata_dasar": "Rasio Lancar", "variasi": ["rasio lancar", "current ratio", "current asset ratio"]},
-    {"kata_dasar": "Rasio Cepat", "variasi": ["rasio cepat", "quick ratio", "acid test ratio"]},
-    {"kata_dasar": "Rasio Kas", "variasi": ["rasio kas", "cash ratio"]},
+    # # LIQUIDITY
+    # {"kata_dasar": "Rasio Lancar", "variasi": ["rasio lancar", "current ratio", "current asset ratio"]},
+    # {"kata_dasar": "Rasio Cepat", "variasi": ["rasio cepat", "quick ratio", "acid test ratio"]},
+    # {"kata_dasar": "Rasio Kas", "variasi": ["rasio kas", "cash ratio"]},
 
-    # LEVERAGE & SOLVENCY
-    {"kata_dasar": "Rasio Hutang terhadap Ekuitas", "variasi": ["rasio hutang terhadap ekuitas", "debt to equity ratio", "debt/equity ratio", "der"]},
-    {"kata_dasar": "Rasio Penutup Bunga", "variasi": ["rasio penutup bunga", "interest coverage ratio", "rasio cakupan bunga"]},
-    {"kata_dasar": "Debt Service Coverage Ratio", "variasi": ["debt service coverage ratio", "dscr", "rasio cakupan layanan hutang"]},
-    {"kata_dasar": "Liabilitas terhadap Aset", "variasi": ["liabilitas terhadap aset", "liabilities to assets", "rasio liabilitas terhadap aset"]},
+    # # LEVERAGE & SOLVENCY
+    # {"kata_dasar": "Rasio Hutang terhadap Ekuitas", "variasi": ["rasio hutang terhadap ekuitas", "debt to equity ratio", "debt/equity ratio", "der"]},
+    # {"kata_dasar": "Rasio Penutup Bunga", "variasi": ["rasio penutup bunga", "interest coverage ratio", "rasio cakupan bunga"]},
+    # {"kata_dasar": "Debt Service Coverage Ratio", "variasi": ["debt service coverage ratio", "dscr", "rasio cakupan layanan hutang"]},
+    # {"kata_dasar": "Liabilitas terhadap Aset", "variasi": ["liabilitas terhadap aset", "liabilities to assets", "rasio liabilitas terhadap aset"]},
 
-    # EFFICIENCY
-    {"kata_dasar": "Perputaran Aset", "variasi": ["perputaran aset", "asset turnover ratio", "rasio perputaran aset"]},
-    {"kata_dasar": "Perputaran Persediaan", "variasi": ["perputaran persediaan", "inventory turnover", "rasio perputaran persediaan"]},
-    {"kata_dasar": "Perputaran Piutang", "variasi": ["perputaran piutang", "receivables turnover", "rasio perputaran piutang"]},
+    # # EFFICIENCY
+    # {"kata_dasar": "Perputaran Aset", "variasi": ["perputaran aset", "asset turnover ratio", "rasio perputaran aset"]},
+    # {"kata_dasar": "Perputaran Persediaan", "variasi": ["perputaran persediaan", "inventory turnover", "rasio perputaran persediaan"]},
+    # {"kata_dasar": "Perputaran Piutang", "variasi": ["perputaran piutang", "receivables turnover", "rasio perputaran piutang"]},
 
-    # GROWTH TRENDS
-    {"kata_dasar": "Pertumbuhan Pendapatan", "variasi": ["pertumbuhan pendapatan", "revenue growth rate", "growth of revenue"]},
-    {"kata_dasar": "Pertumbuhan EBIT", "variasi": ["pertumbuhan ebit", "ebit growth rate", "pertumbuhan laba operasi"]},
-    {"kata_dasar": "Pertumbuhan Laba Bersih", "variasi": ["pertumbuhan laba bersih", "net income growth", "pertumbuhan net income"]},
+    # # GROWTH TRENDS
+    # {"kata_dasar": "Pertumbuhan Pendapatan", "variasi": ["pertumbuhan pendapatan", "revenue growth rate", "growth of revenue"]},
+    # {"kata_dasar": "Pertumbuhan EBIT", "variasi": ["pertumbuhan ebit", "ebit growth rate", "pertumbuhan laba operasi"]},
+    # {"kata_dasar": "Pertumbuhan Laba Bersih", "variasi": ["pertumbuhan laba bersih", "net income growth", "pertumbuhan net income"]},
 
-    # CASH FLOW QUALITY
-    {"kata_dasar": "Arus Kas Operasi terhadap Laba Bersih", "variasi": ["arus kas operasi terhadap laba bersih", "cfo to net income", "cash from ops to net income"]},
-    {"kata_dasar": "Arus Kas Bebas", "variasi": ["arus kas bebas", "free cash flow", "fcf"]},
+    # # CASH FLOW QUALITY
+    # {"kata_dasar": "Arus Kas Operasi terhadap Laba Bersih", "variasi": ["arus kas operasi terhadap laba bersih", "cfo to net income", "cash from ops to net income"]},
+    # {"kata_dasar": "Arus Kas Bebas", "variasi": ["arus kas bebas", "free cash flow", "fcf"]},
 
-    # ALTMAN Z-SCORE COMPONENTS
-    {"kata_dasar": "Modal Kerja terhadap Total Aset", "variasi": ["modal kerja terhadap total aset", "working capital to total assets", "working capital / total assets"]},
-    {"kata_dasar": "Laba Ditahan terhadap Total Aset", "variasi": ["laba ditahan terhadap total aset", "retained earnings to total assets", "retained earnings / total assets"]},
-    {"kata_dasar": "EBIT terhadap Total Aset", "variasi": ["ebit terhadap total aset", "ebit to total assets", "ebit / total assets"]},
-    {"kata_dasar": "Nilai Pasar Ekuitas terhadap Total Liabilitas", "variasi": ["nilai pasar ekuitas terhadap total liabilitas", "market value of equity to total liabilities", "market value of equity / total liabilities"]},
-    {"kata_dasar": "Penjualan terhadap Total Aset", "variasi": ["penjualan terhadap total aset", "sales to total assets", "sales / total assets"]},
-    {"kata_dasar": "Nilai Z-Score", "variasi": ["z-score", "altman z-score", "hasil z-score"]},
+    # # ALTMAN Z-SCORE COMPONENTS
+    # {"kata_dasar": "Modal Kerja terhadap Total Aset", "variasi": ["modal kerja terhadap total aset", "working capital to total assets", "working capital / total assets"]},
+    # {"kata_dasar": "Laba Ditahan terhadap Total Aset", "variasi": ["laba ditahan terhadap total aset", "retained earnings to total assets", "retained earnings / total assets"]},
+    # {"kata_dasar": "EBIT terhadap Total Aset", "variasi": ["ebit terhadap total aset", "ebit to total assets", "ebit / total assets"]},
+    # {"kata_dasar": "Nilai Pasar Ekuitas terhadap Total Liabilitas", "variasi": ["nilai pasar ekuitas terhadap total liabilitas", "market value of equity to total liabilities", "market value of equity / total liabilities"]},
+    # {"kata_dasar": "Penjualan terhadap Total Aset", "variasi": ["penjualan terhadap total aset", "sales to total assets", "sales / total assets"]},
+    # {"kata_dasar": "Nilai Z-Score", "variasi": ["z-score", "altman z-score", "hasil z-score"]},
 
-    # PIOTROSKI F-SCORE
-    {"kata_dasar": "ROA Positif", "variasi": ["roa positif", "positive roa"]},
-    {"kata_dasar": "CFO Positif", "variasi": ["cfo positif", "positive cfo", "arus kas operasi positif"]},
-    {"kata_dasar": "Peningkatan ROA", "variasi": ["peningkatan roa", "roa improvement"]},
-    {"kata_dasar": "CFO Lebih Besar dari Laba Bersih", "variasi": ["cfo lebih besar dari laba bersih", "cfo > net income"]},
-    {"kata_dasar": "Penurunan Leverage YoY", "variasi": ["penurunan leverage yoy", "lower leverage yoy"]},
-    {"kata_dasar": "Peningkatan Rasio Lancar YoY", "variasi": ["peningkatan rasio lancar yoy", "higher current ratio yoy"]},
-    {"kata_dasar": "Tidak Ada Dilusi Ekuitas", "variasi": ["tidak ada dilusi ekuitas", "no equity dilution"]},
-    {"kata_dasar": "Peningkatan Margin Kotor YoY", "variasi": ["peningkatan margin kotor yoy", "higher gross margin yoy"]},
-    {"kata_dasar": "Peningkatan Perputaran Aset YoY", "variasi": ["peningkatan perputaran aset yoy", "higher asset turnover yoy"]},
-    {"kata_dasar": "Nilai F-Score", "variasi": ["f-score", "piotroski f-score", "hasil f-score"]},
+    # # PIOTROSKI F-SCORE
+    # {"kata_dasar": "ROA Positif", "variasi": ["roa positif", "positive roa"]},
+    # {"kata_dasar": "CFO Positif", "variasi": ["cfo positif", "positive cfo", "arus kas operasi positif"]},
+    # {"kata_dasar": "Peningkatan ROA", "variasi": ["peningkatan roa", "roa improvement"]},
+    # {"kata_dasar": "CFO Lebih Besar dari Laba Bersih", "variasi": ["cfo lebih besar dari laba bersih", "cfo > net income"]},
+    # {"kata_dasar": "Penurunan Leverage YoY", "variasi": ["penurunan leverage yoy", "lower leverage yoy"]},
+    # {"kata_dasar": "Peningkatan Rasio Lancar YoY", "variasi": ["peningkatan rasio lancar yoy", "higher current ratio yoy"]},
+    # {"kata_dasar": "Tidak Ada Dilusi Ekuitas", "variasi": ["tidak ada dilusi ekuitas", "no equity dilution"]},
+    # {"kata_dasar": "Peningkatan Margin Kotor YoY", "variasi": ["peningkatan margin kotor yoy", "higher gross margin yoy"]},
+    # {"kata_dasar": "Peningkatan Perputaran Aset YoY", "variasi": ["peningkatan perputaran aset yoy", "higher asset turnover yoy"]},
+    # {"kata_dasar": "Nilai F-Score", "variasi": ["f-score", "piotroski f-score", "hasil f-score"]},
 
-    # M-SCORE INDICATORS
-    {"kata_dasar": "DSRI", "variasi": ["dsri", "days sales in receivables index"]},
-    {"kata_dasar": "GMI", "variasi": ["gmi", "gross margin index"]},
-    {"kata_dasar": "AQI", "variasi": ["aqi", "asset quality index"]},
-    {"kata_dasar": "SGI", "variasi": ["sgi", "sales growth index"]},
-    {"kata_dasar": "DEPI", "variasi": ["depi", "depreciation index"]},
-    {"kata_dasar": "SGAI", "variasi": ["sgai", "sales general and administrative expenses index"]},
-    {"kata_dasar": "LVGI", "variasi": ["lvgi", "leverage index"]},
-    {"kata_dasar": "TATA", "variasi": ["tata", "total accruals to total assets"]},
-    {"kata_dasar": "Nilai M-Score", "variasi": ["m-score", "beneish m-score", "hasil m-score"]},
+    # # M-SCORE INDICATORS
+    # {"kata_dasar": "DSRI", "variasi": ["dsri", "days sales in receivables index"]},
+    # {"kata_dasar": "GMI", "variasi": ["gmi", "gross margin index"]},
+    # {"kata_dasar": "AQI", "variasi": ["aqi", "asset quality index"]},
+    # {"kata_dasar": "SGI", "variasi": ["sgi", "sales growth index"]},
+    # {"kata_dasar": "DEPI", "variasi": ["depi", "depreciation index"]},
+    # {"kata_dasar": "SGAI", "variasi": ["sgai", "sales general and administrative expenses index"]},
+    # {"kata_dasar": "LVGI", "variasi": ["lvgi", "leverage index"]},
+    # {"kata_dasar": "TATA", "variasi": ["tata", "total accruals to total assets"]},
+    # {"kata_dasar": "Nilai M-Score", "variasi": ["m-score", "beneish m-score", "hasil m-score"]},
 ]
 
 # Catatan: 'keyword' di kamus target diubah ke 'kata_dasar' agar konsisten dengan nama variabel.
@@ -213,51 +214,51 @@ def praproses_teks(teks_mentah: str) -> list[str]:
 # Fungsi untuk normalisasi nilai keuangan
 def normalisasi_nilai_keuangan(string_nilai: str) -> float | None:
     """
-    Mengonversi string angka keuangan (misal "Rp1.234.567,89 (Ribu)") ke float.
-    Menangani format Indonesia, tanda kurung untuk negatif, dan satuan.
+    Mengonversi string angka keuangan (misal "Rp1.234.567,89") ke float.
+    Menangani format Indonesia dan tanda kurung untuk negatif.
+    Tidak lagi menangani satuan (ribu, juta, dll.) di sini.
     """
     if not string_nilai or not isinstance(string_nilai, str):
         return None
 
     nilai_str_bersih = string_nilai.lower()
+    # Hapus "rp" dan spasi di awal/akhir
     nilai_str_bersih = nilai_str_bersih.replace("rp", "").strip()
 
-    # Tentukan pengali berdasarkan satuan
-    pengali = 1.0
-    if "triliun" in nilai_str_bersih:
-        pengali = 1_000_000_000_000.0
-        nilai_str_bersih = nilai_str_bersih.replace("triliun", "").strip()
-    elif "miliar" in nilai_str_bersih or " milyar" in nilai_str_bersih:  # Spasi sebelum milyar
-        pengali = 1_000_000_000.0
-        nilai_str_bersih = nilai_str_bersih.replace("miliar", "").replace("milyar", "").strip()
-    elif "juta" in nilai_str_bersih:
-        pengali = 1_000_000.0
-        nilai_str_bersih = nilai_str_bersih.replace("juta", "").strip()
-    elif "ribu" in nilai_str_bersih:
-        pengali = 1_000.0
-        nilai_str_bersih = nilai_str_bersih.replace("ribu", "").strip()
-
+    # Hapus kata-kata satuan umum jika masih ada (sebagai tindakan pencegahan,
+    # seharusnya ini tidak terlalu banyak mempengaruhi karena pencarian utama satuan ada di deteksi_pengali_global)
+    # Ini penting agar tidak mengganggu konversi ke float jika satuan tidak sengaja tertinggal.
+    for satuan_kata in ["ribu", "juta", "miliar", "milyar", "triliun", "trilyun"]:
+        nilai_str_bersih = nilai_str_bersih.replace(satuan_kata, "").strip()
+        
     # Penanganan angka negatif dalam tanda kurung
     negatif = False
     if nilai_str_bersih.startswith("(") and nilai_str_bersih.endswith(")"):
         negatif = True
-        nilai_str_bersih = nilai_str_bersih[1:-1]
+        nilai_str_bersih = nilai_str_bersih[1:-1].strip() # Hapus kurung dan spasi ekstra
 
-    # Hapus karakter non-numerik kecuali koma (desimal) dan titik (ribuan)
-    # Pertama, standarisasi: hapus titik (pemisah ribuan), ganti koma (pemisah desimal) dengan titik
+    # Standarisasi: hapus titik (pemisah ribuan Indonesia), ganti koma (pemisah desimal Indonesia) dengan titik
     nilai_str_bersih = nilai_str_bersih.replace(".", "")  # Hapus pemisah ribuan (titik)
     nilai_str_bersih = nilai_str_bersih.replace(",", ".")  # Ganti pemisah desimal (koma) dengan titik
 
-    # Hapus karakter non-numerik yang mungkin masih tersisa selain titik desimal
-    nilai_str_bersih = re.sub(r"[^0-9.]", "", nilai_str_bersih)
+    # Hapus karakter non-numerik yang mungkin masih tersisa selain titik desimal dan tanda minus (jika ada)
+    # Pastikan tanda minus di awal (jika ada setelah pembersihan kurung) tetap ada.
+    # Regex ini mengizinkan angka, satu titik desimal, dan satu tanda minus di awal.
+    # Ini sedikit lebih permisif dan mengandalkan float() untuk validasi akhir.
+    # Hapus semua karakter kecuali digit, titik desimal, dan tanda minus di awal.
+    # Pertama, bersihkan semua yang bukan digit, titik, atau minus.
+    nilai_str_bersih = re.sub(r"[^\d.-]", "", nilai_str_bersih)
+
+    # Jika ada beberapa tanda minus atau titik, float() akan gagal, yang kita tangkap di try-except.
+    # Contoh: "1.2.3" atau "--5" akan gagal. " -5 " menjadi "-5".
 
     if not nilai_str_bersih:  # Jika string menjadi kosong setelah pembersihan
         return None
 
     try:
         nilai_float = float(nilai_str_bersih)
-        hasil_akhir = nilai_float * pengali
-        return -hasil_akhir if negatif else hasil_akhir
+        # Pengali tidak lagi diterapkan di sini
+        return -nilai_float if negatif and nilai_float >= 0 else nilai_float # Pastikan negatif diterapkan dengan benar
     except ValueError:
         return None  # Gagal konversi ke float
 
@@ -308,6 +309,52 @@ def identifikasi_tahun_pelaporan(teks_dokumen: str, jumlah_karakter_awal: int = 
         return str(max(kandidat_tahun))
 
     return None
+
+
+def deteksi_pengali_global(teks_dokumen: str) -> float:
+    """
+    Mendeteksi pengali global (misalnya ribuan, jutaan) dari bagian awal dokumen.
+    Biasanya dinyatakan sebagai "(Dinyatakan dalam ribuan Rupiah)".
+
+    Args:
+        teks_dokumen: String isi dokumen.
+
+    Returns:
+        Float pengali yang terdeteksi (misalnya 1000.0 untuk ribuan) atau 1.0 jika tidak ada.
+    """
+    if not teks_dokumen or not isinstance(teks_dokumen, str):
+        return 1.0
+
+    # Kamus pengali
+    pengali_map = {
+        'ribu': 1000.0,
+        'juta': 1_000_000.0,
+        'miliar': 1_000_000_000.0,
+        'triliun': 1_000_000_000_000.0
+    }
+
+    # Pola regex untuk mencari deklarasi pengali.
+    # - (?i) untuk case-insensitive.
+    # - \s* menangani spasi opsional.
+    # - (?:dalam\s+)?opsional "dalam".
+    # - (ribu|juta|miliar|triliun) menangkap unit pengali.
+    # - \s*(?:mata\s+uang\s+)?Rupiah opsional "mata uang Rupiah" atau hanya "Rupiah".
+    # - \)? opsional kurung tutup.
+    pola_pengali = re.compile(
+        r"(?i)\(?(?:Dinyatakan\s+(?:dalam\s+)?|Dalam\s+|Disajikan\s+dalam\s+)(ribu|juta|miliar|triliun)\s*(?:mata\s+uang\s+)?(?:Rupiah|Rp)?\)?",
+        re.IGNORECASE
+    )
+
+    # Cari hanya di bagian awal dokumen (misalnya 1000 karakter pertama)
+    teks_pencarian = teks_dokumen[:1000]
+
+    match = pola_pengali.search(teks_pencarian)
+
+    if match:
+        unit_terdeteksi = match.group(1).lower() # Ambil grup pertama (unit) dan ubah ke lowercase
+        return pengali_map.get(unit_terdeteksi, 1.0) # Kembalikan nilai dari map, default 1.0
+
+    return 1.0 # Default jika tidak ditemukan
 
 
 def is_potentially_numeric(text: str) -> bool:
@@ -591,7 +638,11 @@ def ekstrak_data_keuangan_dari_teks_ocr_refined(
     return extracted_data
 
 
-def ekstrak_data_keuangan_tahunan(teks_dokumen: str, daftar_kata_kunci: list[dict] | None = None) -> dict:
+def ekstrak_data_keuangan_tahunan(
+    teks_dokumen: str, 
+    daftar_kata_kunci: list[dict] | None = None, 
+    pengali_global: float = 1.0
+) -> dict:
     if daftar_kata_kunci is None:
         daftar_kata_kunci = DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT
     
@@ -630,7 +681,7 @@ def ekstrak_data_keuangan_tahunan(teks_dokumen: str, daftar_kata_kunci: list[dic
                     for token in tokens_on_same_line:
                         normalized_val = normalisasi_nilai_keuangan(token)
                         if normalized_val is not None:
-                            nilai_final_untuk_kata_dasar = normalized_val
+                            nilai_final_untuk_kata_dasar = normalized_val * pengali_global # Apply global multiplier
                             break # Found value on same line, stop token search
                     
                     if nilai_final_untuk_kata_dasar is not None:
@@ -658,7 +709,7 @@ def ekstrak_data_keuangan_tahunan(teks_dokumen: str, daftar_kata_kunci: list[dic
                         for token in tokens_on_next_line:
                             normalized_val = normalisasi_nilai_keuangan(token)
                             if normalized_val is not None:
-                                nilai_final_untuk_kata_dasar = normalized_val
+                                nilai_final_untuk_kata_dasar = normalized_val * pengali_global # Apply global multiplier
                                 break # Found value on subsequent line, stop token search
                         
                         if nilai_final_untuk_kata_dasar is not None:

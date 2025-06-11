@@ -15,11 +15,11 @@ except ImportError:
     print("Peringatan: Pillow (PIL) tidak terinstal. Pembuatan gambar uji akan dilewati.")
 
 # Impor fungsi dari modul-modul kita
-from parser_gambar import ekstrak_teks_dari_gambar, DEFAULT_OPSI_PRAPROSES # Import default juga
+from SaranaModule.parser_gambar import ekstrak_teks_dari_gambar, DEFAULT_OPSI_PRAPROSES # Import default juga
 # from parser_gambar import ekstrak_data_terstruktur_vision # This will be mocked
-from parser_dokumen_teks import ekstrak_teks_dari_txt, ekstrak_teks_dari_docx
-from parser_pdf import ekstrak_teks_dari_pdf
-from pengekstrak_kata_kunci import ekstrak_data_keuangan_tahunan, format_ke_json, ekstrak_data_keuangan_dari_struktur_vision, DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT, normalisasi_nilai_keuangan
+from SaranaModule.parser_dokumen_teks import ekstrak_teks_dari_txt, ekstrak_teks_dari_docx
+from SaranaModule.parser_pdf import ekstrak_teks_dari_pdf
+from SaranaModule.pengekstrak_kata_kunci import ekstrak_data_keuangan_tahunan, format_ke_json, ekstrak_data_keuangan_dari_struktur_vision, DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT, normalisasi_nilai_keuangan
 
 # Impor untuk mocking
 import unittest # Diperlukan untuk mock jika tidak ada Testcase

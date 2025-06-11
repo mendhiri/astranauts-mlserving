@@ -13,7 +13,7 @@ from SaranaModule.utilitas_cache import buat_kunci_cache_file, simpan_ke_cache, 
 
 # Usahakan impor dari parser_gambar.py lokal
 try:
-    from parser_gambar import ekstrak_teks_dari_gambar
+    from SaranaModule.parser_gambar import ekstrak_teks_dari_gambar
 except ImportError:
     print("Peringatan: Tidak dapat mengimpor ekstrak_teks_dari_gambar dari parser_gambar. OCR untuk PDF akan gagal.")
     print("Pastikan parser_gambar.py ada di direktori yang sama atau dapat diakses via sys.path.")
