@@ -89,10 +89,8 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     # ASET 
     {"kata_dasar": "Jumlah aset lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar", "Aset lancar"]},
     {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar", "Aset tidak lancar"]},
-    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset", "Aset"]},
     {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek", "Liabilitas jangka pendek"]},
     {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang", "Liabilitas jangka panjang"]},
-    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas", "Liabilitas"]},
     {"kata_dasar": "Jumlah ekuitas", "variasi": ["Jumlah ekuitas", "Total ekuitas", "Ekuitas"]},
     {"kata_dasar": "Jumlah liabilitas dan ekuitas", "variasi": ["Jumlah liabilitas dan ekuitas", "Total liabilitas dan ekuitas", "Liabilitas dan ekuitas"]},
     {"kata_dasar": "Pendapatan bersih", "variasi": ["Pendapatan bersih", "Penjualan bersih", "Total pendapatan", "Total penjualan"]},
