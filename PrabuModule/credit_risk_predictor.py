@@ -1,68 +1,110 @@
-from FinancialScoreModels.utils import get_value
+# from FinancialScoreModels.utils import get_value # get_value tidak ada di utils.py
 
 def get_financial_ratios_for_prabu(financial_data_t: dict, financial_data_t_minus_1: dict = None) -> dict:
     """
     Menghitung rasio keuangan dasar yang mungkin berguna untuk prediksi risiko kredit.
     Ini adalah contoh, bisa ditambahkan lebih banyak rasio sesuai kebutuhan.
+    Diasumsikan financial_data_t memiliki struktur: {"Nama Akun": {"current_year": V, "previous_year": V}}
+    Diasumsikan financial_data_t_minus_1 (jika ada) memiliki struktur: {"Nama Akun": V_tm1}
     """
     ratios = {}
 
+    # Helper untuk mengambil nilai, disesuaikan dengan struktur baru financial_data_t
+    def _get_current_year_value(data, key, default=None):
+        if not isinstance(data, dict):
+            return default
+        account_data = data.get(key)
+        if isinstance(account_data, dict):
+            return account_data.get("current_year", default)
+        # Fallback jika struktur tidak seperti yang diharapkan (misalnya, sudah nilai tunggal)
+        # Ini bisa terjadi jika input financial_data_t tidak konsisten
+        # Namun, untuk Prabu, kita harapkan struktur bersarang dari Sarana.
+        # Jika data tidak dict (misal None karena key tidak ada), .get sudah menangani.
+        return default # Jika account_data bukan dict (misal None atau nilai tunggal tak terduga)
+
+    def _get_simple_value(data, key, default=None): # Untuk financial_data_t_minus_1
+        if not isinstance(data, dict):
+            return default
+        return data.get(key, default)
+
     # Rasio Likuiditas
-    current_assets = get_value(financial_data_t, "Jumlah aset lancar")
-    current_liabilities = get_value(financial_data_t, "Jumlah liabilitas jangka pendek")
+    current_assets = _get_current_year_value(financial_data_t, "Jumlah aset lancar")
+    current_liabilities = _get_current_year_value(financial_data_t, "Jumlah liabilitas jangka pendek")
     if current_assets is not None and current_liabilities is not None and current_liabilities > 0:
         ratios['current_ratio'] = current_assets / current_liabilities
     else:
         ratios['current_ratio'] = None
 
     # Rasio Leverage
-    total_liabilities = get_value(financial_data_t, "Jumlah liabilitas")
-    total_equity = get_value(financial_data_t, "Jumlah ekuitas")
-    if total_liabilities is not None and total_equity is not None and total_equity != 0: # Hindari pembagian dengan nol jika ekuitas 0 atau negatif signifikan
+    total_liabilities = _get_current_year_value(financial_data_t, "Jumlah liabilitas")
+    total_equity = _get_current_year_value(financial_data_t, "Jumlah ekuitas")
+    if total_liabilities is not None and total_equity is not None and total_equity != 0:
         ratios['debt_to_equity_ratio'] = total_liabilities / total_equity
     else:
         ratios['debt_to_equity_ratio'] = None
     
-    if total_liabilities is not None:
-        total_assets = get_value(financial_data_t, "Jumlah aset")
-        if total_assets is not None and total_assets > 0:
-            ratios['debt_ratio'] = total_liabilities / total_assets
-        else:
-            ratios['debt_ratio'] = None
+    total_assets_for_debt_ratio = _get_current_year_value(financial_data_t, "Jumlah aset") # Re-fetch for clarity
+    if total_liabilities is not None and total_assets_for_debt_ratio is not None and total_assets_for_debt_ratio > 0:
+        ratios['debt_ratio'] = total_liabilities / total_assets_for_debt_ratio
     else:
         ratios['debt_ratio'] = None
 
-
     # Rasio Profitabilitas
-    net_income = get_value(financial_data_t, "Laba tahun berjalan")
-    sales = get_value(financial_data_t, "Pendapatan bersih")
+    net_income = _get_current_year_value(financial_data_t, "Laba tahun berjalan")
+    sales = _get_current_year_value(financial_data_t, "Pendapatan bersih")
     if net_income is not None and sales is not None and sales > 0:
         ratios['net_profit_margin'] = net_income / sales
     else:
         ratios['net_profit_margin'] = None
 
-    if net_income is not None and total_equity is not None and total_equity > 0:
+    if net_income is not None and total_equity is not None and total_equity > 0: # total_equity sudah diambil
         ratios['roe'] = net_income / total_equity
     else:
         ratios['roe'] = None
         
-    ebt = get_value(financial_data_t, "Laba sebelum pajak penghasilan")
-    interest_expense = get_value(financial_data_t, "Beban bunga")
+    ebt = _get_current_year_value(financial_data_t, "Laba sebelum pajak penghasilan")
+    interest_expense = _get_current_year_value(financial_data_t, "Beban bunga") # Asumsi bunga selalu negatif atau 0
     ebit = None
     if ebt is not None:
-        ebit = ebt + (interest_expense if interest_expense is not None else 0)
-    
-    if ebit is not None and total_assets is not None and total_assets > 0:
-        ratios['roa_ebit'] = ebit / total_assets # Return on Assets from EBIT
+        # Jika beban bunga adalah nilai negatif (umumnya), maka ebt - (-beban bunga) = ebt + beban bunga (abs)
+        # Jika interest_expense adalah positif (biaya), maka ebt + interest_expense
+        # Untuk konsistensi, kita anggap interest_expense adalah nilai absolut dari biaya bunga jika disimpan negatif.
+        # Atau jika disimpan sebagai positif, maka EBT + Beban Bunga (jika Beban Bunga adalah item pengurang di P/L)
+        # Umumnya EBIT = Laba Sebelum Pajak + Beban Bunga. Jika Beban Bunga di data adalah negatif, maka perlu di-abs atau dikurangi.
+        # Jika "Beban Bunga" positif di data (misal 50), maka EBT + 50.
+        # Jika "Beban Bunga" negatif di data (misal -50), maka EBT - (-50) = EBT + 50.
+        # Jadi, EBT + abs(Beban Bunga) jika Beban Bunga bisa positif/negatif.
+        # Atau EBT - Beban Bunga jika Beban Bunga adalah item negatif (pengurang).
+        # Kita asumsikan "Beban bunga" di data keuangan adalah angka positif yang merepresentasikan biaya.
+        # Atau jika negatif, itu berarti pendapatan bunga (jarang untuk item ini).
+        # Untuk financial_statement_parser, biasanya nilai beban disimpan sebagai negatif.
+        # Jika "Beban bunga" adalah -119 (seperti di contoh Sarana), maka EBT + abs(-119).
+        actual_interest_expense = interest_expense if interest_expense is not None else 0
+        ebit = ebt + abs(actual_interest_expense) # EBIT = EBT + Biaya Bunga (absolut)
+            
+    total_assets_for_roa = _get_current_year_value(financial_data_t, "Jumlah aset") # Re-fetch
+    if ebit is not None and total_assets_for_roa is not None and total_assets_for_roa > 0:
+        ratios['roa_ebit'] = ebit / total_assets_for_roa # Return on Assets from EBIT
     else:
         ratios['roa_ebit'] = None
         
     # Contoh rasio yang menggunakan data t-1 (jika ada)
     if financial_data_t_minus_1:
-        sales_tm1 = get_value(financial_data_t_minus_1, "Pendapatan bersih")
-        if sales is not None and sales_tm1 is not None and sales_tm1 > 0:
+        # Asumsi financial_data_t_minus_1 adalah dict nilai tunggal
+        sales_tm1 = _get_simple_value(financial_data_t_minus_1, "Pendapatan bersih")
+        if sales is not None and sales_tm1 is not None and sales_tm1 > 0: # sales dari financial_data_t
             ratios['sales_growth'] = (sales - sales_tm1) / sales_tm1
         else:
+            ratios['sales_growth'] = None
+    else: # Jika financial_data_t_minus_1 tidak disediakan, coba ambil dari previous_year financial_data_t
+        sales_prev_year_from_t = None
+        account_sales_data_t = financial_data_t.get("Pendapatan bersih")
+        if isinstance(account_sales_data_t, dict):
+            sales_prev_year_from_t = account_sales_data_t.get("previous_year")
+
+        if sales is not None and sales_prev_year_from_t is not None and sales_prev_year_from_t > 0:
+            ratios['sales_growth'] = (sales - sales_prev_year_from_t) / sales_prev_year_from_t
+        elif 'sales_growth' not in ratios: # Hanya set None jika belum dihitung dari financial_data_t_minus_1
             ratios['sales_growth'] = None
             
     # Tambahkan Beneish M Score dan Altman Z Score jika sudah dihitung sebelumnya

@@ -698,89 +698,99 @@ def ekstrak_data_keuangan_tahunan(
     if daftar_kata_kunci is None:
         daftar_kata_kunci = DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT
     
-    # Initialize all kata_dasar from daftar_kata_kunci to None
-    data_hasil_ekstraksi = {info["kata_dasar"]: None for info in daftar_kata_kunci}
+    # Initialize all kata_dasar from daftar_kata_kunci to store dict {'t': None, 't-1': None}
+    data_hasil_ekstraksi = {
+        info["kata_dasar"]: {'t': None, 't-1': None} 
+        for info in daftar_kata_kunci
+    }
     
     if not teks_dokumen or not isinstance(teks_dokumen, str):
         return data_hasil_ekstraksi
 
-    # Normalisasi teks dokumen
-    teks_dokumen = teks_dokumen.replace("\n", " ")
-    teks_dokumen = re.sub(r"\s+", " ", teks_dokumen).strip() # Tambahkan strip() untuk menghapus spasi di awal/akhir
-
-    # Pre-process lines: lowercase and strip whitespace
-    # Pastikan tidak ada baris kosong setelah split, karena teks_dokumen kini satu baris panjang
-    lines = [line.strip() for line in teks_dokumen.lower().splitlines() if line.strip()] 
+    # Normalisasi teks dokumen menjadi satu baris panjang untuk mempermudah regex split nanti
+    # Namun, untuk logika pencarian baris-demi-baris, kita akan split berdasarkan newline asli dulu
+    original_lines = [line.strip().lower() for line in teks_dokumen.splitlines() if line.strip()]
     
-    # tahun_pelaporan = identifikasi_tahun_pelaporan(teks_dokumen) # Not used for value selection yet
+    # tahun_pelaporan = identifikasi_tahun_pelaporan(teks_dokumen) # Belum digunakan aktif
 
     MAX_LINES_TO_SEARCH_AFTER_KEYWORD = 3 # Max non-empty lines to check after the keyword's line
+    MAX_VALUES_TO_CAPTURE = 2 # Untuk t dan t-1
 
     for info_kata_kunci in daftar_kata_kunci:
         kata_dasar_target = info_kata_kunci["kata_dasar"]
-        nilai_final_untuk_kata_dasar = None # Stores the single value found for this kata_dasar
+        ditemukan_nilai_untuk_kata_dasar_ini = False # Flag untuk menghentikan pencarian variasi jika sudah ketemu
 
         for variasi in info_kata_kunci["variasi"]:
+            if ditemukan_nilai_untuk_kata_dasar_ini:
+                break # Sudah ditemukan dari variasi lain untuk kata_dasar_target ini
+
             variasi_lower = variasi.lower()
             
-            for line_idx, current_line_content in enumerate(lines):
-                if not current_line_content: # Skip empty lines (already stripped)
-                    continue
+            for line_idx, current_line_content in enumerate(original_lines):
+                if ditemukan_nilai_untuk_kata_dasar_ini:
+                    break
 
                 keyword_pos = current_line_content.find(variasi_lower)
                 if keyword_pos != -1:
-                    # Keyword found in current_line_content
-                    
-                    # 1. Search on the remainder of the same line
+                    # Keyword ditemukan
+                    values_found_for_this_instance = [] # Kumpulkan nilai untuk instance kata kunci ini
+
+                    # 1. Cari di sisa baris yang sama
                     text_after_keyword_on_same_line = current_line_content[keyword_pos + len(variasi_lower):]
-                    # Split carefully to handle various spacing
-                    tokens_on_same_line = [t for t in text_after_keyword_on_same_line.split(' ') if t] 
-                    for token in tokens_on_same_line:
+                    # Tokenisasi dengan hati-hati: split berdasarkan spasi, tapi juga pertimbangkan angka yang mungkin terpisah oleh newline palsu
+                    # Untuk saat ini, split sederhana dengan spasi setelah join newline di atas.
+                    # Regex \s+ akan menangani spasi ganda.
+                    potential_value_strings_same_line = re.split(r'\s+', text_after_keyword_on_same_line.strip())
+                    
+                    for token in potential_value_strings_same_line:
+                        if not token: continue # Lewati token kosong
                         normalized_val = normalisasi_nilai_keuangan(token)
                         if normalized_val is not None:
-                            nilai_final_untuk_kata_dasar = normalized_val * pengali_global # Apply global multiplier
-                            break # Found value on same line, stop token search
+                            values_found_for_this_instance.append(normalized_val * pengali_global)
+                            if len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
+                                break
                     
-                    if nilai_final_untuk_kata_dasar is not None:
-                        # Found value for this variasi, no need to check subsequent lines for this keyword instance
-                        break # Break from line_idx loop (move to next variasi or next kata_dasar)
+                    # 2. Jika belum cukup nilai, cari di baris berikutnya
+                    if len(values_found_for_this_instance) < MAX_VALUES_TO_CAPTURE:
+                        lines_searched_count = 0
+                        for lookahead_idx in range(line_idx + 1, len(original_lines)):
+                            if lines_searched_count >= MAX_LINES_TO_SEARCH_AFTER_KEYWORD or \
+                               len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
+                                break
 
-                    # 2. If not found on same line, search on subsequent non-empty lines
-                    lines_searched_count = 0
-                    for lookahead_idx in range(line_idx + 1, len(lines)):
-                        if lines_searched_count >= MAX_LINES_TO_SEARCH_AFTER_KEYWORD:
-                            break # Searched enough subsequent lines
+                            next_line_content = original_lines[lookahead_idx]
+                            if not next_line_content: # Lewati baris kosong (meskipun sudah difilter di awal)
+                                continue
+                            
+                            lines_searched_count += 1
 
-                        next_line_content = lines[lookahead_idx]
-                        if not next_line_content: # Skip empty lines
-                            continue
-                        
-                        lines_searched_count += 1 # Count a non-empty line search
+                            # Berhenti jika ada kata kunci lain (bukan variasi dari kata_dasar_target saat ini) ditemukan
+                            if is_another_keyword_present(next_line_content, kata_dasar_target, daftar_kata_kunci):
+                                break 
 
-                        # Stop if another keyword (not related to current kata_dasar_target) is found
-                        if is_another_keyword_present(next_line_content, kata_dasar_target, daftar_kata_kunci):
-                            break # Stop downward search for this instance of variasi
-
-                        # Split carefully
-                        tokens_on_next_line = [t for t in next_line_content.split(' ') if t]
-                        for token in tokens_on_next_line:
-                            normalized_val = normalisasi_nilai_keuangan(token)
-                            if normalized_val is not None:
-                                nilai_final_untuk_kata_dasar = normalized_val * pengali_global # Apply global multiplier
-                                break # Found value on subsequent line, stop token search
-                        
-                        if nilai_final_untuk_kata_dasar is not None:
-                            break # Break from lookahead_idx loop (found value on subsequent lines)
-                
-                if nilai_final_untuk_kata_dasar is not None:
-                    # Value found for this variasi, break from iterating lines for this variasi
-                    break 
+                            potential_value_strings_next_line = re.split(r'\s+', next_line_content.strip())
+                            for token in potential_value_strings_next_line:
+                                if not token: continue
+                                normalized_val = normalisasi_nilai_keuangan(token)
+                                if normalized_val is not None:
+                                    values_found_for_this_instance.append(normalized_val * pengali_global)
+                                    if len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
+                                        break
+                            if len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
+                                break # dari loop lookahead_idx
+                    
+                    # Setelah mencari di baris yang sama dan berikutnya untuk instance keyword ini
+                    if values_found_for_this_instance:
+                        data_hasil_ekstraksi[kata_dasar_target]['t'] = values_found_for_this_instance[0]
+                        if len(values_found_for_this_instance) > 1:
+                            data_hasil_ekstraksi[kata_dasar_target]['t-1'] = values_found_for_this_instance[1]
+                        ditemukan_nilai_untuk_kata_dasar_ini = True # Tandai bahwa sudah ditemukan untuk kata_dasar_target ini
+                        break # Keluar dari loop line_idx, lanjut ke variasi berikutnya (atau kata_dasar berikutnya jika ini sudah selesai)
             
-            if nilai_final_untuk_kata_dasar is not None:
-                # Value found for this kata_dasar_target using one of its variasi
-                break # Break from variasi loop (move to next kata_dasar_target)
+            # if ditemukan_nilai_untuk_kata_dasar_ini: # Ini sudah ditangani di atas
+            #     break # Keluar dari loop variasi
         
-        # Assign the found value (or None if not found) to the specific kata_dasar_target
-        data_hasil_ekstraksi[kata_dasar_target] = nilai_final_untuk_kata_dasar
+        # Tidak perlu assign di sini lagi karena sudah di dalam loop
+        # data_hasil_ekstraksi[kata_dasar_target] = nilai_final_untuk_kata_dasar
         
     return data_hasil_ekstraksi

@@ -287,38 +287,45 @@ def compare_results(extracted_data_list, ground_truth_dir_path):
         for kata_kunci_gt, nilai_gt in current_file_gt_dict.items():
             total_ground_truth_keywords += 1 # Increment for each GT keyword
             keyword_ground_truth_occurrences[kata_kunci_gt] += 1 
-            nilai_ekstrak = hasil_ekstraksi_dokumen.get(kata_kunci_gt)
             
-            # For P/R/F1 of keyword *detection*:
-            # A keyword is considered "detected" if it's a key in hasil_ekstraksi_dokumen
-            # and its value is not None (meaning it was actively extracted, not just absent).
-            if nilai_ekstrak is not None:
+            # nilai_ekstrak_dict will be like {'t': value_t, 't-1': value_t_minus_1} or None
+            nilai_ekstrak_dict = hasil_ekstraksi_dokumen.get(kata_kunci_gt) 
+            
+            nilai_t_ekstrak = None
+            if isinstance(nilai_ekstrak_dict, dict) and nilai_ekstrak_dict.get('t') is not None:
+                nilai_t_ekstrak = nilai_ekstrak_dict['t']
+
+            # For P/R/F1 of keyword *detection* (based on 't' value):
+            if nilai_t_ekstrak is not None:
                 keyword_tp[kata_kunci_gt] += 1
-                keyword_detection_counts[kata_kunci_gt] += 1 # For original detection rate metric
+                keyword_detection_counts[kata_kunci_gt] += 1 
                 
-                if nilai_gt is not None and nilai_ekstrak == nilai_gt: # Exact value match
+                # Compare 't' value with ground truth value
+                if nilai_gt is not None and nilai_t_ekstrak == nilai_gt: 
                     exact_match_counts[kata_kunci_gt] += 1
-                    total_correctly_extracted_with_correct_values += 1 # Increment for correct value match
+                    total_correctly_extracted_with_correct_values += 1 
                 
                 is_nilai_gt_numeric = isinstance(nilai_gt, (int, float))
-                is_nilai_ekstrak_numeric = isinstance(nilai_ekstrak, (int, float))
+                is_nilai_ekstrak_numeric = isinstance(nilai_t_ekstrak, (int, float)) # Already checked for None
 
                 if is_nilai_gt_numeric and is_nilai_ekstrak_numeric:
                     keyword_numeric_value_pairs_count[kata_kunci_gt] += 1
-                    sum_absolute_errors[kata_kunci_gt] += abs(float(nilai_ekstrak) - float(nilai_gt))
+                    sum_absolute_errors[kata_kunci_gt] += abs(float(nilai_t_ekstrak) - float(nilai_gt))
                     if float(nilai_gt) != 0:
-                        sum_percentage_errors[kata_kunci_gt] += abs((float(nilai_ekstrak) - float(nilai_gt)) / float(nilai_gt)) * 100
-                    elif float(nilai_ekstrak) != 0: # GT is 0, extracted is not 0
+                        sum_percentage_errors[kata_kunci_gt] += abs((float(nilai_t_ekstrak) - float(nilai_gt)) / float(nilai_gt)) * 100
+                    elif float(nilai_t_ekstrak) != 0: 
                         sum_percentage_errors[kata_kunci_gt] += 100.0 
-            else: # Not extracted, or extracted as None
+            else: # Keyword not detected with a valid 't' value, or 't' value is None
                 keyword_fn[kata_kunci_gt] += 1
 
         # Iterate through extracted keys for FP for *this file*
-        for kata_kunci_ekstrak, nilai_ekstrak_val in hasil_ekstraksi_dokumen.items():
-            # Ensure it's a real keyword, not an error/info message from extraction
+        # nilai_ekstrak_val_dict is {'t': val_t, 't-1': val_t_minus_1}
+        for kata_kunci_ekstrak, nilai_ekstrak_val_dict in hasil_ekstraksi_dokumen.items():
             if kata_kunci_ekstrak.startswith("error_") or kata_kunci_ekstrak.startswith("info_"):
                 continue
-            if nilai_ekstrak_val is not None: # Must have a non-None value to be considered "extracted"
+            
+            # Consider it a potential FP if 't' value is present
+            if isinstance(nilai_ekstrak_val_dict, dict) and nilai_ekstrak_val_dict.get('t') is not None:
                 if kata_kunci_ekstrak not in current_file_gt_dict:
                     keyword_fp[kata_kunci_ekstrak] += 1
 
