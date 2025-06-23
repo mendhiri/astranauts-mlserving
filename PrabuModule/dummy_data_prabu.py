@@ -68,9 +68,12 @@ print(df_dummy.head())
 def get_dummy_data(year_value=2018, n_samples=100):
     """
     Generates a Pandas DataFrame with dummy data for PRABU model testing.
+    The features generated are MScore.YYYY.int from 2015 up to year_value.
+    The target is MScore.{year_value+1}.int.
 
     Args:
-        year_value (int): The base year for the features.
+        year_value (int): The base year for the features, e.g., 2018.
+                          Features will be MScore.2015.int to MScore.2018.int.
         n_samples (int): The number of dummy company records to generate.
 
     Returns:
@@ -79,65 +82,23 @@ def get_dummy_data(year_value=2018, n_samples=100):
     current_year = year_value
     target_year = current_year + 1
 
-    # Define possible sectors and countries
-    # These should ideally match the columns used during training of PrabuModel.joblib
-    # Listing them explicitly based on common one-hot encoding practices
-    _sectors = [
-        'Automobiles and Components', 'Banks', 'Capital Goods', 'Commercial and Professional Services',
-        'Consumer Durables and Apparel', 'Consumer Services', 'Diversified Financials',
-        'Energy', 'Food Beverage and Tobacco', 'Food and Staples Retailing',
-        'Health Care Equipment and Services', 'Household and Personal Products',
-        'Insurance', 'Materials', 'Media and Entertainment', 'Pharmaceuticals Biotechnology and Life Sciences',
-        'Real Estate', 'Retailing', 'Semiconductors and Semiconductor Equipment',
-        'Software and Services', 'Technology Hardware and Equipment',
-        'Telecommunication Services', 'Transportation', 'Utilities'
-    ]
+    dummy_data_dict = {}
+    feature_cols = []
 
-    _countries = [
-        'France', 'Germany', 'Italy', 'Netherlands', 'Spain', 'United Kingdom', 
-        'Other_European_Countries', 'North_America', 'Asia_Pacific', 'Rest_of_the_World'
-    ] # Assuming these were the categories
-
-    # Generate base financial data
-    dummy_data_dict = {
-        f'MScore.{current_year}.int': np.random.randint(0, 2, size=n_samples),
-        f'Turnover.{current_year}': np.random.uniform(100000, 20000000, size=n_samples),
-        f'EBIT.{current_year}': np.random.uniform(-100000, 1000000, size=n_samples),
-        f'PLTax.{current_year}': np.random.uniform(-50000, 500000, size=n_samples),
-        f'Leverage.{current_year}': np.random.uniform(0.05, 0.8, size=n_samples),
-        f'ROE.{current_year}': np.random.uniform(-0.2, 0.3, size=n_samples),
-        f'TAsset.{current_year}': np.random.uniform(500000, 100000000, size=n_samples),
-        # Target variable for the next year (can be used for evaluation if needed)
-        f'MScore.{target_year}.int': np.random.randint(0, 2, size=n_samples)
-    }
-
-    # Generate one-hot encoded sectors
-    assigned_sec = np.random.choice(_sectors, size=n_samples)
-    for sector_name in _sectors:
-        dummy_data_dict[sector_name] = (assigned_sec == sector_name).astype(int)
-
-    # Generate one-hot encoded countries
-    assigned_ctry = np.random.choice(_countries, size=n_samples)
-    for country_name in _countries:
-        dummy_data_dict[country_name] = (assigned_ctry == country_name).astype(int)
+    # Generate MScore.YYYY.int features from 2015 up to current_year
+    for year in range(2015, current_year + 1):
+        col_name = f'MScore.{year}.int'
+        dummy_data_dict[col_name] = np.random.randint(0, 2, size=n_samples)
+        feature_cols.append(col_name)
+    
+    # Target variable for the next year
+    target_col_name = f'MScore.{target_year}.int'
+    dummy_data_dict[target_col_name] = np.random.randint(0, 2, size=n_samples)
 
     df = pd.DataFrame(dummy_data_dict)
-    
-    # Define feature columns expected by the model (excluding the target for next year)
-    # This order should ideally match the training data column order if the model is sensitive to it
-    # For many scikit-learn models, column order doesn't matter as long as names are consistent.
-    feature_cols = [f'MScore.{current_year}.int', f'Turnover.{current_year}', 
-                    f'EBIT.{current_year}', f'PLTax.{current_year}', 
-                    f'Leverage.{current_year}', f'ROE.{current_year}', f'TAsset.{current_year}'] + \
-                   _sectors + _countries
-    
-    # Ensure all expected columns are present, fill with 0 if any somehow missed (should not happen with above logic)
-    for col in feature_cols:
-        if col not in df:
-            df[col] = 0
             
-    # Return the DataFrame with features and the target column (for potential evaluation)
-    return df[feature_cols + [f'MScore.{target_year}.int']]
+    # Return the DataFrame with features and the target column
+    return df[feature_cols + [target_col_name]]
 
 if __name__ == '__main__':
     # Example of how to use the function
