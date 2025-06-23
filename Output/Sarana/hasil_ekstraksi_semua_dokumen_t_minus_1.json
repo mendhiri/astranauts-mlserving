@@ -1,0 +1,35 @@
+[
+    {
+        "nama_file": "astra_lapkeu.pdf", 
+        "hasil_ekstraksi": {
+            "Jumlah aset lancar": 18000000000000.0,
+            "Jumlah aset tidak lancar": 75000000000000.0,
+            "Jumlah liabilitas jangka pendek": 13000000000000.0,
+            "Jumlah liabilitas jangka panjang": 1800000000000.0,
+            "Jumlah ekuitas": 78200000000000.0,
+            "Jumlah liabilitas dan ekuitas": 93000000000000.0,
+            "Pendapatan bersih": 95000000000000.0,
+            "Beban pokok pendapatan": -85000000000000.0,
+            "Laba bruto": 10000000000000.0,
+            "Laba sebelum pajak penghasilan": 20000000000000.0,
+            "Beban pajak penghasilan": -400000000000.0,
+            "Laba tahun berjalan": 19600000000000.0,
+            "Arus kas bersih yang diperoleh dari aktivitas operasi": 2800000000000.0,
+            "Arus kas bersih yang diperoleh dari aktivitas investasi": 3000000000000.0,
+            "Arus kas bersih yang digunakan untuk aktivitas pendanaan": -19000000000000.0,
+            "Piutang usaha": 12000000000000.0,
+            "Aset tetap": 50000000000000.0,
+            "Aset tetap bruto": 60000000000000.0,
+            "Akumulasi penyusutan": 10000000000000.0,
+            "Modal kerja bersih": 5000000000000.0,
+            "Jumlah aset": 93000000000000.0,
+            "Jumlah liabilitas": 14800000000000.0,
+            "Laba ditahan": 60000000000000.0,
+            "Beban bunga": 500000000000.0,
+            "Beban penyusutan": 2500000000000.0,
+            "Beban penjualan": 3000000000000.0,
+            "Beban administrasi dan umum": 2000000000000.0,
+            "Beban usaha": 7500000000000.0
+        }
+    }
+]

@@ -99,72 +99,40 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "Laba sebelum pajak penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan", "Laba sebelum pajak", "Laba sebelum pajak penghasilan dan beban pajak"]},
     {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan", "Pajak penghasilan", "Tax expense"]},
     {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan", "Laba bersih", "Net income", "Laba periode berjalan"]},
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas operasi", "variasi": ["Arus kas bersih yang diperoleh dari", "Arus kas operasi bersih"]},
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas investasi", "variasi": ["Arus kas bersih yang diperoleh dari", "Arus kas investasi bersih"]},
-    {"kata_dasar": "Arus kas bersih yang digunakan untuk aktivitas pendanaan", "variasi": ["Arus kas bersih yang digunakan untuk", "Arus kas pendanaan bersih"]},
+    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset", "Total aktiva"]},
+    {"kata_dasar": "Piutang Usaha", "variasi": ["Piutang Usaha", "Piutang Dagang", "Piutang Usaha Pihak Ketiga", "Net Receivables", "Trade Receivables"]},
+    {"kata_dasar": "Aset Tetap", "variasi": ["Aset Tetap", "Total Aset Tetap", "Property, Plant, Equipment, Net", "Aset Tetap Bersih"]},
+    {"kata_dasar": "Aset Tetap Bruto", "variasi": ["Aset Tetap Bruto", "Gross Property Plant Equipment", "Harga Perolehan Aset Tetap", "Aset Tetap (Harga Perolehan)"]},
+    {"kata_dasar": "Akumulasi Penyusutan", "variasi": ["Akumulasi Penyusutan", "Accumulated Depreciation"]},
+    {"kata_dasar": "Modal Kerja Bersih", "variasi": ["Modal Kerja Bersih", "Working Capital", "Modal Kerja"]}, # Dihitung sbg Aset Lancar - Liabilitas Jk Pendek
+    
+    # LIABILITAS & EKUITAS (Beberapa sudah ada)
+    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas", "Total kewajiban"]},
+    # Jumlah ekuitas sudah ada -> bisa dipakai utk Nilai Buku Ekuitas
 
-    # # PROFITABILITY
-    # {"kata_dasar": "Margin Laba Bersih", "variasi": ["margin laba bersih", "net profit margin", "margin keuntungan bersih"]},
-    # {"kata_dasar": "Margin Operasi", "variasi": ["margin operasi", "operating margin", "ebit margin", "margin ebit"]},
-    # {"kata_dasar": "Return on Assets", "variasi": ["return on assets", "roa", "pengembalian atas aset", "rasio pengembalian aset"]},
-    # {"kata_dasar": "Return on Equity", "variasi": ["return on equity", "roe", "pengembalian atas ekuitas", "rasio pengembalian ekuitas"]},
-    # {"kata_dasar": "Margin EBITDA", "variasi": ["margin ebitda", "ebitda margin", "margin laba sebelum bunga pajak dan depresiasi"]},
+    {"kata_dasar": "Laba ditahan", "variasi": ["Laba ditahan", "Saldo laba", "Retained earnings", "Saldo laba yang belum ditentukan penggunaannya"]},
+    {"kata_dasar": "Beban bunga", "variasi": ["Beban bunga", "Interest expense", "Biaya keuangan", "Biaya bunga", "Beban keuangan"]},
+    {"kata_dasar": "Beban penyusutan", "variasi": ["Beban penyusutan", "Beban depresiasi", "Penyusutan dan amortisasi", "Depreciation and amortization expense"]},
+    {"kata_dasar": "Beban penjualan", "variasi": ["Beban penjualan", "Selling expenses"]},
+    {"kata_dasar": "Beban administrasi dan umum", "variasi": ["Beban administrasi dan umum", "General and administrative expenses", "Beban umum dan administrasi"]},
+    {"kata_dasar": "Beban usaha", "variasi": ["Beban usaha", "Beban operasi", "Total beban usaha"]}, # Bisa mencakup SGA + Penyusutan
 
-    # # LIQUIDITY
-    # {"kata_dasar": "Rasio Lancar", "variasi": ["rasio lancar", "current ratio", "current asset ratio"]},
-    # {"kata_dasar": "Rasio Cepat", "variasi": ["rasio cepat", "quick ratio", "acid test ratio"]},
-    # {"kata_dasar": "Rasio Kas", "variasi": ["rasio kas", "cash ratio"]},
+    # ARUS KAS (Beberapa sudah ada)
+    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas operasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas operasi", "Arus kas bersih dari aktivitas operasi", "Arus kas dari operasi", "Net cash from operating activities", "Arus kas operasi bersih"]},
+    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas investasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas investasi", "Arus kas bersih dari aktivitas investasi", "Arus kas dari investasi", "Net cash from investing activities", "Arus kas investasi bersih"]},
+    {"kata_dasar": "Arus kas bersih yang digunakan untuk aktivitas pendanaan", "variasi": ["Arus kas bersih yang digunakan untuk aktivitas pendanaan", "Arus kas bersih dari aktivitas pendanaan", "Arus kas dari pendanaan", "Net cash from financing activities", "Arus kas pendanaan bersih"]},
 
-    # # LEVERAGE & SOLVENCY
-    # {"kata_dasar": "Rasio Hutang terhadap Ekuitas", "variasi": ["rasio hutang terhadap ekuitas", "debt to equity ratio", "debt/equity ratio", "der"]},
-    # {"kata_dasar": "Rasio Penutup Bunga", "variasi": ["rasio penutup bunga", "interest coverage ratio", "rasio cakupan bunga"]},
-    # {"kata_dasar": "Debt Service Coverage Ratio", "variasi": ["debt service coverage ratio", "dscr", "rasio cakupan layanan hutang"]},
-    # {"kata_dasar": "Liabilitas terhadap Aset", "variasi": ["liabilitas terhadap aset", "liabilities to assets", "rasio liabilitas terhadap aset"]},
-
-    # # EFFICIENCY
-    # {"kata_dasar": "Perputaran Aset", "variasi": ["perputaran aset", "asset turnover ratio", "rasio perputaran aset"]},
-    # {"kata_dasar": "Perputaran Persediaan", "variasi": ["perputaran persediaan", "inventory turnover", "rasio perputaran persediaan"]},
-    # {"kata_dasar": "Perputaran Piutang", "variasi": ["perputaran piutang", "receivables turnover", "rasio perputaran piutang"]},
-
-    # # GROWTH TRENDS
-    # {"kata_dasar": "Pertumbuhan Pendapatan", "variasi": ["pertumbuhan pendapatan", "revenue growth rate", "growth of revenue"]},
-    # {"kata_dasar": "Pertumbuhan EBIT", "variasi": ["pertumbuhan ebit", "ebit growth rate", "pertumbuhan laba operasi"]},
-    # {"kata_dasar": "Pertumbuhan Laba Bersih", "variasi": ["pertumbuhan laba bersih", "net income growth", "pertumbuhan net income"]},
-
-    # # CASH FLOW QUALITY
-    # {"kata_dasar": "Arus Kas Operasi terhadap Laba Bersih", "variasi": ["arus kas operasi terhadap laba bersih", "cfo to net income", "cash from ops to net income"]},
-    # {"kata_dasar": "Arus Kas Bebas", "variasi": ["arus kas bebas", "free cash flow", "fcf"]},
-
-    # # ALTMAN Z-SCORE COMPONENTS
-    # {"kata_dasar": "Modal Kerja terhadap Total Aset", "variasi": ["modal kerja terhadap total aset", "working capital to total assets", "working capital / total assets"]},
-    # {"kata_dasar": "Laba Ditahan terhadap Total Aset", "variasi": ["laba ditahan terhadap total aset", "retained earnings to total assets", "retained earnings / total assets"]},
-    # {"kata_dasar": "EBIT terhadap Total Aset", "variasi": ["ebit terhadap total aset", "ebit to total assets", "ebit / total assets"]},
-    # {"kata_dasar": "Nilai Pasar Ekuitas terhadap Total Liabilitas", "variasi": ["nilai pasar ekuitas terhadap total liabilitas", "market value of equity to total liabilities", "market value of equity / total liabilities"]},
-    # {"kata_dasar": "Penjualan terhadap Total Aset", "variasi": ["penjualan terhadap total aset", "sales to total assets", "sales / total assets"]},
-    # {"kata_dasar": "Nilai Z-Score", "variasi": ["z-score", "altman z-score", "hasil z-score"]},
-
-    # # PIOTROSKI F-SCORE
-    # {"kata_dasar": "ROA Positif", "variasi": ["roa positif", "positive roa"]},
-    # {"kata_dasar": "CFO Positif", "variasi": ["cfo positif", "positive cfo", "arus kas operasi positif"]},
-    # {"kata_dasar": "Peningkatan ROA", "variasi": ["peningkatan roa", "roa improvement"]},
-    # {"kata_dasar": "CFO Lebih Besar dari Laba Bersih", "variasi": ["cfo lebih besar dari laba bersih", "cfo > net income"]},
-    # {"kata_dasar": "Penurunan Leverage YoY", "variasi": ["penurunan leverage yoy", "lower leverage yoy"]},
-    # {"kata_dasar": "Peningkatan Rasio Lancar YoY", "variasi": ["peningkatan rasio lancar yoy", "higher current ratio yoy"]},
-    # {"kata_dasar": "Tidak Ada Dilusi Ekuitas", "variasi": ["tidak ada dilusi ekuitas", "no equity dilution"]},
-    # {"kata_dasar": "Peningkatan Margin Kotor YoY", "variasi": ["peningkatan margin kotor yoy", "higher gross margin yoy"]},
-    # {"kata_dasar": "Peningkatan Perputaran Aset YoY", "variasi": ["peningkatan perputaran aset yoy", "higher asset turnover yoy"]},
-    # {"kata_dasar": "Nilai F-Score", "variasi": ["f-score", "piotroski f-score", "hasil f-score"]},
-
-    # # M-SCORE INDICATORS
-    # {"kata_dasar": "DSRI", "variasi": ["dsri", "days sales in receivables index"]},
-    # {"kata_dasar": "GMI", "variasi": ["gmi", "gross margin index"]},
-    # {"kata_dasar": "AQI", "variasi": ["aqi", "asset quality index"]},
-    # {"kata_dasar": "SGI", "variasi": ["sgi", "sales growth index"]},
-    # {"kata_dasar": "DEPI", "variasi": ["depi", "depreciation index"]},
-    # {"kata_dasar": "SGAI", "variasi": ["sgai", "sales general and administrative expenses index"]},
-    # {"kata_dasar": "LVGI", "variasi": ["lvgi", "leverage index"]},
-    # {"kata_dasar": "TATA", "variasi": ["tata", "total accruals to total assets"]},
-    # {"kata_dasar": "Nilai M-Score", "variasi": ["m-score", "beneish m-score", "hasil m-score"]},
+    # Istilah untuk tahun lalu (digunakan jika Sarana tidak bisa otomatis membedakan t dan t-1)
+    # Ini adalah pendekatan sementara dan mungkin tidak ideal.
+    {"kata_dasar": "Piutang usaha tahun lalu", "variasi": ["Piutang usaha tahun lalu", "Piutang dagang tahun sebelumnya"]},
+    {"kata_dasar": "Pendapatan bersih tahun lalu", "variasi": ["Pendapatan bersih tahun lalu", "Penjualan tahun lalu"]},
+    {"kata_dasar": "Laba kotor tahun lalu", "variasi": ["Laba kotor tahun lalu", "Laba bruto tahun lalu"]},
+    {"kata_dasar": "Aset tidak lancar selain PPE tahun lalu", "variasi": ["Aset tidak lancar selain PPE tahun lalu"]}, # Perlu dihitung
+    {"kata_dasar": "Total aset tahun lalu", "variasi": ["Total aset tahun lalu", "Jumlah aset tahun lalu"]},
+    {"kata_dasar": "Beban penyusutan tahun lalu", "variasi": ["Beban penyusutan tahun lalu"]},
+    {"kata_dasar": "Aset tetap bruto tahun lalu", "variasi": ["Aset tetap bruto tahun lalu"]},
+    {"kata_dasar": "Beban SGA tahun lalu", "variasi": ["Beban SGA tahun lalu", "Beban penjualan, umum, dan administrasi tahun lalu"]},
+    {"kata_dasar": "Total liabilitas tahun lalu", "variasi": ["Total liabilitas tahun lalu", "Jumlah liabilitas tahun lalu"]}
 ]
 
 # Catatan: 'keyword' di kamus target diubah ke 'kata_dasar' agar konsisten dengan nama variabel.
