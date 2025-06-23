@@ -1,296 +1,204 @@
-from .utils import safe_division, get_value
-
-# --- Rasio untuk Beneish M-Score ---
-# Referensi utama untuk formula Beneish M-Score dan variabelnya:
-# Beneish, M. D. (1999). The Detection of Earnings Manipulation. Financial Analysts Journal, 55(5), 24–36.
-# Tambahan referensi interpretasi dan variasi: CFA Institute materials, Investopedia.
-
-def calculate_dsri(data_t: dict, data_t_minus_1: dict) -> float | None:
+def calculate_common_financial_ratios(data_t):
     """
-    Menghitung Days' Sales in Receivables Index (DSRI).
-    DSRI = (Net Receivables_t / Sales_t) / (Net Receivables_t-1 / Sales_t-1)
-    Peningkatan signifikan pada DSRI dapat mengindikasikan potensi penggelembungan pendapatan.
+    Menghitung beberapa rasio keuangan umum yang sering digunakan dalam analisis kredit dan kesehatan keuangan.
+
+    Args:
+        data_t (dict): Data keuangan periode t (tahun berjalan).
+                       Struktur: {'nama_item_keuangan': nilai, ...}
+
+    Returns:
+        dict: Dictionary yang berisi rasio-rasio keuangan yang dihitung.
+              Mengembalikan dictionary dengan pesan error jika data tidak cukup.
     """
-    receivables_t = get_value(data_t, "Piutang usaha", 0)
-    sales_t = get_value(data_t, "Pendapatan bersih", 0)
-    
-    receivables_t_minus_1 = get_value(data_t_minus_1, "Piutang usaha", 0)
-    sales_t_minus_1 = get_value(data_t_minus_1, "Pendapatan bersih", 0)
+    required_keys = [
+        "Jumlah liabilitas", "Jumlah ekuitas", # Untuk Debt-to-Equity
+        "Jumlah aset lancar", "Jumlah liabilitas jangka pendek", # Untuk Current Ratio
+        "Laba sebelum pajak penghasilan", "Beban bunga", # Untuk Interest Coverage Ratio
+        "Laba tahun berjalan", "Pendapatan bersih" # Untuk Net Profit Margin
+    ]
 
-    if any(v is None for v in [receivables_t, sales_t, receivables_t_minus_1, sales_t_minus_1]):
-        return None
-    if sales_t == 0 or sales_t_minus_1 == 0: # Hindari pembagian dengan nol jika penjualan 0
-        return None
+    # Cek apakah semua kunci yang dibutuhkan ada
+    missing_keys = [key for key in required_keys if key not in data_t]
+    if missing_keys:
+        return {"error": f"Missing items in data_t for financial ratios: {', '.join(missing_keys)}"}
 
-    # Asumsi hari dalam setahun adalah 365 untuk konsistensi.
-    # Beberapa formula menggunakan hari aktual dalam periode.
-    # DSR_t = (Receivables_t / Sales_t)
-    # DSR_t_minus_1 = (Receivables_t_minus_1 / Sales_t_minus_1)
-    # DSRI = DSR_t / DSR_t_minus_1
-    
-    # Langsung hitung indeksnya:
-    # DSRI = (Receivables_t / Sales_t) / (Receivables_t_minus_1 / Sales_t_minus_1)
-    # DSRI = (Receivables_t * Sales_t_minus_1) / (Sales_t * Receivables_t_minus_1)
-
-    numerator = safe_division(receivables_t, sales_t)
-    denominator = safe_division(receivables_t_minus_1, sales_t_minus_1)
-    
-    return safe_division(numerator, denominator)
-
-def calculate_gmi(data_t: dict, data_t_minus_1: dict) -> float | None:
-    """
-    Menghitung Gross Margin Index (GMI).
-    GMI = [(Sales_t-1 - COGS_t-1) / Sales_t-1] / [(Sales_t - COGS_t) / Sales_t]
-        = (Gross Profit_t-1 / Sales_t-1) / (Gross Profit_t / Sales_t)
-    GMI > 1 menunjukkan penurunan margin kotor, yang bisa menjadi tanda negatif.
-    """
-    sales_t = get_value(data_t, "Pendapatan bersih", 0)
-    gross_profit_t = get_value(data_t, "Laba bruto", 0)
-    
-    sales_t_minus_1 = get_value(data_t_minus_1, "Pendapatan bersih", 0)
-    gross_profit_t_minus_1 = get_value(data_t_minus_1, "Laba bruto", 0)
-
-    if any(v is None for v in [sales_t, gross_profit_t, sales_t_minus_1, gross_profit_t_minus_1]):
-        return None
-    if sales_t == 0 or sales_t_minus_1 == 0:
-        return None
+    try:
+        # Konversi semua nilai yang akan digunakan ke float
+        total_liabilities = float(data_t["Jumlah liabilitas"])
+        total_equity = float(data_t["Jumlah ekuitas"])
+        current_assets = float(data_t["Jumlah aset lancar"])
+        current_liabilities = float(data_t["Jumlah liabilitas jangka pendek"])
+        ebit = float(data_t["Laba sebelum pajak penghasilan"]) + float(data_t.get("Beban bunga", 0)) # Beban bunga bisa 0
+        interest_expense = float(data_t.get("Beban bunga", 0)) # Beban bunga bisa 0
+        net_income = float(data_t["Laba tahun berjalan"])
+        sales = float(data_t["Pendapatan bersih"])
         
-    gm_t_minus_1 = safe_division(gross_profit_t_minus_1, sales_t_minus_1)
-    gm_t = safe_division(gross_profit_t, sales_t)
-    
-    return safe_division(gm_t_minus_1, gm_t)
-
-def calculate_aqi(data_t: dict, data_t_minus_1: dict) -> float | None:
-    """
-    Menghitung Asset Quality Index (AQI).
-    AQI = [1 – (Current Assets_t + Net PP&E_t) / Total Assets_t] / 
-          [1 – (Current Assets_t-1 + Net PP&E_t-1) / Total Assets_t-1]
-    Ini mengukur proporsi aset selain aset lancar dan PP&E (aset tidak produktif/lunak).
-    AQI > 1 dapat mengindikasikan peningkatan upaya kapitalisasi atau penundaan pengakuan beban.
-    """
-    ca_t = get_value(data_t, "Jumlah aset lancar", 0)
-    ppe_net_t = get_value(data_t, "Aset tetap", 0) # Aset Tetap Bersih (Net PP&E)
-    total_assets_t = get_value(data_t, "Jumlah aset", 0)
-
-    ca_t_minus_1 = get_value(data_t_minus_1, "Jumlah aset lancar", 0)
-    ppe_net_t_minus_1 = get_value(data_t_minus_1, "Aset tetap", 0)
-    total_assets_t_minus_1 = get_value(data_t_minus_1, "Jumlah aset", 0)
-
-    if any(v is None for v in [ca_t, ppe_net_t, total_assets_t, ca_t_minus_1, ppe_net_t_minus_1, total_assets_t_minus_1]):
-        return None
-    if total_assets_t == 0 or total_assets_t_minus_1 == 0:
-        return None
-
-    # Proporsi aset lunak tahun t = 1 - ((CA_t + PPE_Net_t) / TA_t)
-    soft_assets_ratio_t_num = total_assets_t - (ca_t + ppe_net_t)
-    soft_assets_ratio_t = safe_division(soft_assets_ratio_t_num, total_assets_t)
-
-    # Proporsi aset lunak tahun t-1 = 1 - ((CA_t-1 + PPE_Net_t-1) / TA_t-1)
-    soft_assets_ratio_t_minus_1_num = total_assets_t_minus_1 - (ca_t_minus_1 + ppe_net_t_minus_1)
-    soft_assets_ratio_t_minus_1 = safe_division(soft_assets_ratio_t_minus_1_num, total_assets_t_minus_1)
-    
-    if soft_assets_ratio_t is None or soft_assets_ratio_t_minus_1 is None:
-        return None
-
-    return safe_division(soft_assets_ratio_t, soft_assets_ratio_t_minus_1)
+        # Pastikan ada beban bunga jika ebit digunakan untuk ICR
+        if "Beban bunga" not in data_t and "Laba sebelum pajak penghasilan" in data_t :
+             # Jika beban bunga tidak ada, ICR tidak bisa dihitung dengan cara standar
+             # namun kita bisa asumsikan 0 jika memang tidak ada.
+             # 'Beban bunga' sudah di-default ke 0 di atas.
+             pass
 
 
-def calculate_sgi(data_t: dict, data_t_minus_1: dict) -> float | None:
-    """
-    Menghitung Sales Growth Index (SGI).
-    SGI = Sales_t / Sales_t-1
-    Pertumbuhan penjualan yang tinggi, meskipun positif, bisa juga dikaitkan dengan tekanan untuk
-    mempertahankan pertumbuhan yang dapat mendorong manipulasi.
-    """
-    sales_t = get_value(data_t, "Pendapatan bersih", 0)
-    sales_t_minus_1 = get_value(data_t_minus_1, "Pendapatan bersih", 0)
-    
-    return safe_division(sales_t, sales_t_minus_1)
+    except ValueError as e:
+        return {"error": f"ValueError, data tidak dapat dikonversi ke float untuk rasio: {e}"}
+    except KeyError as e: # Seharusnya sudah ditangani oleh missing_keys, tapi sebagai fallback
+        return {"error": f"KeyError during data extraction for ratios: {e}"}
 
-def calculate_depi(data_t: dict, data_t_minus_1: dict) -> float | None:
-    """
-    Menghitung Depreciation Index (DEPI).
-    DEPI = Depreciation Rate_t-1 / Depreciation Rate_t
-    Dimana Depreciation Rate = Depreciation_t / (Depreciation_t + Net PP&E_t)
-    DEPI > 1 menunjukkan bahwa tingkat penyusutan aset melambat, yang mungkin
-    mengindikasikan perusahaan merevisi umur manfaat aset ke atas atau menggunakan metode
-    yang menurunkan beban penyusutan untuk meningkatkan laba.
-    """
-    dep_expense_t = get_value(data_t, "Beban penyusutan", 0)
-    ppe_net_t = get_value(data_t, "Aset tetap", 0) # Aset Tetap Bersih
-    
-    dep_expense_t_minus_1 = get_value(data_t_minus_1, "Beban penyusutan", 0)
-    ppe_net_t_minus_1 = get_value(data_t_minus_1, "Aset tetap", 0)
+    ratios = {}
 
-    if any(v is None for v in [dep_expense_t, ppe_net_t, dep_expense_t_minus_1, ppe_net_t_minus_1]):
-        return None
+    # 1. Debt-to-Equity Ratio
+    if total_equity == 0:
+        # Jika ekuitas nol, rasio ini tidak terdefinisi atau sangat tinggi jika ada utang.
+        # Jika utang juga nol, bisa dianggap 0. Jika utang > 0, sangat berisiko.
+        ratios["Debt-to-Equity Ratio"] = float('inf') if total_liabilities > 0 else 0.0
+        ratios["Debt-to-Equity Ratio_note"] = "Total Equity is zero."
+    else:
+        ratios["Debt-to-Equity Ratio"] = total_liabilities / total_equity
 
-    dep_rate_t_denom = dep_expense_t + ppe_net_t
-    dep_rate_t = safe_division(dep_expense_t, dep_rate_t_denom)
+    # 2. Current Ratio
+    if current_liabilities == 0:
+        # Jika liabilitas jangka pendek nol, likuiditas sangat baik.
+        ratios["Current Ratio"] = float('inf') if current_assets > 0 else 0.0 # Atau bisa juga dianggap sangat tinggi
+        ratios["Current Ratio_note"] = "Current Liabilities are zero."
+    else:
+        ratios["Current Ratio"] = current_assets / current_liabilities
 
-    dep_rate_t_minus_1_denom = dep_expense_t_minus_1 + ppe_net_t_minus_1
-    dep_rate_t_minus_1 = safe_division(dep_expense_t_minus_1, dep_rate_t_minus_1_denom)
-    
-    if dep_rate_t is None or dep_rate_t_minus_1 is None:
-        return None
-
-    return safe_division(dep_rate_t_minus_1, dep_rate_t)
-
-def calculate_sgai(data_t: dict, data_t_minus_1: dict) -> float | None:
-    """
-    Menghitung Sales, General, and Administrative Expenses Index (SGAI).
-    SGAI = (SGA Expenses_t / Sales_t) / (SGA Expenses_t-1 / Sales_t-1)
-    Peningkatan SGAI (nilai > 1) mungkin menunjukkan inefisiensi, tetapi dalam konteks manipulasi,
-    perusahaan yang memanipulasi laba mungkin menunjukkan peningkatan yang tidak proporsional
-    dalam beban ini relatif terhadap penjualan.
-    """
-    # Coba dapatkan Beban Penjualan dan Beban Adm & Umum secara terpisah, lalu jumlahkan.
-    # Jika tidak ada, gunakan Beban Usaha sebagai proxy.
-    s_exp_t = get_value(data_t, "Beban penjualan", 0)
-    ga_exp_t = get_value(data_t, "Beban administrasi dan umum", 0)
-    sga_t = None
-    if s_exp_t is not None and ga_exp_t is not None:
-        sga_t = s_exp_t + ga_exp_t
-    elif get_value(data_t, "Beban usaha", 0) is not None: # Fallback ke Beban Usaha
-        sga_t = get_value(data_t, "Beban usaha", 0)
-            
-    sales_t = get_value(data_t, "Pendapatan bersih", 0)
-
-    s_exp_tm1 = get_value(data_t_minus_1, "Beban penjualan", 0)
-    ga_exp_tm1 = get_value(data_t_minus_1, "Beban administrasi dan umum", 0)
-    sga_t_minus_1 = None
-    if s_exp_tm1 is not None and ga_exp_tm1 is not None:
-        sga_t_minus_1 = s_exp_tm1 + ga_exp_tm1
-    elif get_value(data_t_minus_1, "Beban usaha", 0) is not None: # Fallback ke Beban Usaha
-        sga_t_minus_1 = get_value(data_t_minus_1, "Beban usaha", 0)
-            
-    sales_t_minus_1 = get_value(data_t_minus_1, "Pendapatan bersih", 0)
-
-    if any(v is None for v in [sga_t, sales_t, sga_t_minus_1, sales_t_minus_1]):
-        return None
-    if sales_t == 0 or sales_t_minus_1 == 0:
-        return None
-
-    sga_ratio_t = safe_division(sga_t, sales_t)
-    sga_ratio_t_minus_1 = safe_division(sga_t_minus_1, sales_t_minus_1)
-    
-    return safe_division(sga_ratio_t, sga_ratio_t_minus_1)
-
-def calculate_lvgi(data_t: dict, data_t_minus_1: dict) -> float | None:
-    """
-    Menghitung Leverage Index (LVGI).
-    LVGI = (Total Liabilities_t / Total Assets_t) / (Total Liabilities_t-1 / Total Assets_t-1)
-    LVGI > 1 menunjukkan peningkatan leverage, yang bisa menjadi sinyal negatif.
-    """
-    total_liabilities_t = get_value(data_t, "Jumlah liabilitas", 0)
-    total_assets_t = get_value(data_t, "Jumlah aset", 0)
-    
-    total_liabilities_t_minus_1 = get_value(data_t_minus_1, "Jumlah liabilitas", 0)
-    total_assets_t_minus_1 = get_value(data_t_minus_1, "Jumlah aset", 0)
-
-    if any(v is None for v in [total_liabilities_t, total_assets_t, total_liabilities_t_minus_1, total_assets_t_minus_1]):
-        return None
-
-    lev_t = safe_division(total_liabilities_t, total_assets_t)
-    lev_t_minus_1 = safe_division(total_liabilities_t_minus_1, total_assets_t_minus_1)
-
-    return safe_division(lev_t, lev_t_minus_1)
-
-def calculate_tata(data_t: dict) -> float | None:
-    """
-    Menghitung Total Accruals to Total Assets (TATA).
-    TATA = (Net Income_t – Cash Flow From Operations_t) / Total Assets_t
-    Laba Tahun Berjalan digunakan sebagai proxy untuk Net Income.
-    Akrual yang tinggi bisa mengindikasikan manipulasi laba.
-    """
-    net_income_t = get_value(data_t, "Laba tahun berjalan", 0)
-    cfo_t = get_value(data_t, "Arus kas bersih yang diperoleh dari aktivitas operasi", 0)
-    total_assets_t = get_value(data_t, "Jumlah aset", 0)
-
-    if any(v is None for v in [net_income_t, cfo_t, total_assets_t]):
-        return None
-    
-    total_accruals = net_income_t - cfo_t
-    return safe_division(total_accruals, total_assets_t)
-
-
-# --- Rasio untuk Altman Z-Score ---
-# Referensi utama:
-# Altman, E. I. (1968). Financial Ratios, Discriminant Analysis and the Prediction of Corporate Bankruptcy. The Journal of Finance, 23(4), 589-609.
-# Altman, E. I. (2000). Predicting financial distress of companies: revisiting the Z-score and ZETA models. Stern School of Business, New York University.
-
-def calculate_x1_working_capital_to_total_assets(data_t: dict) -> float | None:
-    """
-    Menghitung X1 untuk Altman Z-Score.
-    X1 = (Current Assets - Current Liabilities) / Total Assets
-       = Working Capital / Total Assets
-    Mengukur likuiditas aset relatif terhadap ukuran perusahaan.
-    """
-    current_assets = get_value(data_t, "Jumlah aset lancar", 0)
-    current_liabilities = get_value(data_t, "Jumlah liabilitas jangka pendek", 0)
-    total_assets = get_value(data_t, "Jumlah aset", 0)
-
-    if any(v is None for v in [current_assets, current_liabilities, total_assets]):
-        return None
+    # 3. Interest Coverage Ratio (ICR)
+    # ICR = EBIT / Beban Bunga
+    if interest_expense == 0:
+        # Jika tidak ada beban bunga, perusahaan tidak memiliki risiko pembayaran bunga.
+        # ICR bisa dianggap sangat tinggi (tak terhingga) jika EBIT positif.
+        # Jika EBIT juga 0 atau negatif, interpretasinya berbeda.
+        if ebit > 0:
+            ratios["Interest Coverage Ratio"] = float('inf')
+            ratios["Interest Coverage Ratio_note"] = "No interest expense, EBIT is positive."
+        elif ebit == 0:
+            ratios["Interest Coverage Ratio"] = 0.0 # Atau tidak terdefinisi
+            ratios["Interest Coverage Ratio_note"] = "No interest expense, EBIT is zero."
+        else: # EBIT < 0
+            ratios["Interest Coverage Ratio"] = float('-inf') # EBIT negatif, tidak ada beban bunga
+            ratios["Interest Coverage Ratio_note"] = "No interest expense, EBIT is negative."
+    else:
+        ratios["Interest Coverage Ratio"] = ebit / interest_expense
         
-    working_capital = current_assets - current_liabilities
-    return safe_division(working_capital, total_assets)
-
-def calculate_x2_retained_earnings_to_total_assets(data_t: dict) -> float | None:
-    """
-    Menghitung X2 untuk Altman Z-Score.
-    X2 = Retained Earnings / Total Assets
-    Mengukur profitabilitas kumulatif perusahaan.
-    """
-    retained_earnings = get_value(data_t, "Laba ditahan", 0)
-    total_assets = get_value(data_t, "Jumlah aset", 0)
-    
-    return safe_division(retained_earnings, total_assets)
-
-def calculate_x3_ebit_to_total_assets(data_t: dict) -> float | None:
-    """
-    Menghitung X3 untuk Altman Z-Score.
-    X3 = Earnings Before Interest and Taxes (EBIT) / Total Assets
-    Mengukur efisiensi operasi terlepas dari faktor pajak dan leverage.
-    EBIT diestimasi sebagai Laba Sebelum Pajak + Beban Bunga.
-    """
-    ebt = get_value(data_t, "Laba sebelum pajak penghasilan", 0)
-    interest_expense = get_value(data_t, "Beban bunga", 0)
-    total_assets = get_value(data_t, "Jumlah aset", 0)
-
-    if ebt is None or total_assets is None:
-        return None
-    
-    ebit = ebt
-    if interest_expense is not None: # Jika Beban Bunga ada, tambahkan kembali
-        ebit += interest_expense 
+    # 4. Net Profit Margin
+    if sales == 0:
+        ratios["Net Profit Margin"] = 0.0 # Tidak ada penjualan, tidak ada margin
+        ratios["Net Profit Margin_note"] = "Sales are zero."
+    else:
+        ratios["Net Profit Margin"] = net_income / sales
         
-    return safe_division(ebit, total_assets)
+    # Tambahan rasio yang mungkin berguna
+    # 5. Gross Profit Margin
+    if "Laba bruto" in data_t:
+        try:
+            gross_profit = float(data_t["Laba bruto"])
+            if sales == 0:
+                ratios["Gross Profit Margin"] = 0.0
+                ratios["Gross Profit Margin_note"] = "Sales are zero."
+            else:
+                ratios["Gross Profit Margin"] = gross_profit / sales
+        except (ValueError, KeyError):
+            ratios["Gross Profit Margin_error"] = "Could not calculate due to missing/invalid 'Laba bruto'."
 
-def calculate_x4_market_value_equity_to_total_liabilities(data_t: dict, market_value_equity: float = None) -> float | None:
-    """
-    Menghitung X4 untuk Altman Z-Score.
-    Untuk perusahaan publik: X4 = Market Value of Equity / Total Liabilities.
-    Untuk perusahaan privat: X4 = Book Value of Equity / Total Liabilities.
-    Mengukur seberapa jauh aset perusahaan dapat menurun sebelum liabilitas melebihi aset.
-    """
-    total_liabilities = get_value(data_t, "Jumlah liabilitas", 0)
+
+    # 6. Debt Ratio (Total Liabilities / Total Assets)
+    if "Jumlah aset" in data_t:
+        try:
+            total_assets = float(data_t["Jumlah aset"])
+            if total_assets == 0:
+                ratios["Debt Ratio"] = float('inf') if total_liabilities > 0 else 0.0
+                ratios["Debt Ratio_note"] = "Total Assets are zero."
+            else:
+                ratios["Debt Ratio"] = total_liabilities / total_assets
+        except (ValueError, KeyError):
+            ratios["Debt Ratio_error"] = "Could not calculate due to missing/invalid 'Jumlah aset'."
+
+
+    return ratios
+
+if __name__ == '__main__':
+    data_t_astra_example = {
+        "Jumlah liabilitas": 16289000000000.0,
+        "Jumlah ekuitas": 84714000000000.0,
+        "Jumlah aset lancar": 19238000000000.0,
+        "Jumlah liabilitas jangka pendek": 14300000000000.0,
+        "Laba sebelum pajak penghasilan": 22136000000000.0,
+        "Beban bunga": 550000000000.0,
+        "Laba tahun berjalan": 21661000000000.0,
+        "Pendapatan bersih": 108249000000000.0,
+        "Laba bruto": 10511000000000.0, # Untuk Gross Profit Margin
+        "Jumlah aset": 101003000000000.0 # Untuk Debt Ratio
+    }
+
+    print("--- Menghitung Rasio Keuangan Umum ---")
+    common_ratios = calculate_common_financial_ratios(data_t_astra_example)
+
+    if "error" in common_ratios:
+        print(f"Error menghitung rasio: {common_ratios['error']}")
+    else:
+        print("Rasio Keuangan Umum:")
+        for ratio_name, ratio_value in common_ratios.items():
+            if not ratio_name.endswith("_note") and not ratio_name.endswith("_error"):
+                print(f"  {ratio_name}: {ratio_value:.4f}", end="")
+                if f"{ratio_name}_note" in common_ratios:
+                    print(f" ({common_ratios[f'{ratio_name}_note']})")
+                else:
+                    print()
+            elif ratio_name.endswith("_error"):
+                 print(f"  Error for {ratio_name.replace('_error', '')}: {ratio_value}")
+
+
+    print("\n--- Test dengan Data Hilang (Beban Bunga) ---")
+    data_missing_interest = data_t_astra_example.copy()
+    del data_missing_interest["Beban bunga"] # Hapus Beban Bunga
+     # Laba sebelum pajak penghasilan tetap ada
     
-    equity_val_for_ratio = None
-    if market_value_equity is not None: # Jika nilai pasar disediakan (untuk publik)
-        equity_val_for_ratio = market_value_equity
-    else: # Gunakan nilai buku ekuitas (untuk privat atau jika pasar tidak ada utk publik)
-        equity_val_for_ratio = get_value(data_t, "Jumlah ekuitas", 0)
+    ratios_no_interest_item = calculate_common_financial_ratios(data_missing_interest)
+    if "error" in ratios_no_interest_item:
+        # Jika 'Beban bunga' adalah required key dan dihapus, ini akan error.
+        # Jika 'Beban bunga' opsional dan di-default ke 0, maka ICR akan dihitung.
+        print(f"Error (Beban Bunga Dihapus): {ratios_no_interest_item['error']}")
+    else:
+        print("Rasio (Beban Bunga Dihapus):")
+        print(f"  Interest Coverage Ratio: {ratios_no_interest_item.get('Interest Coverage Ratio', 'N/A'):.4f} ({ratios_no_interest_item.get('Interest Coverage Ratio_note', '')})")
 
-    return safe_division(equity_val_for_ratio, total_liabilities)
 
-def calculate_x5_sales_to_total_assets(data_t: dict) -> float | None:
-    """
-    Menghitung X5 untuk Altman Z-Score.
-    X5 = Sales / Total Assets
-    Mengukur kemampuan aset perusahaan untuk menghasilkan penjualan (asset turnover).
-    """
-    sales = get_value(data_t, "Pendapatan bersih", 0)
-    total_assets = get_value(data_t, "Jumlah aset", 0)
+    print("\n--- Test dengan Ekuitas Nol ---")
+    data_zero_equity = data_t_astra_example.copy()
+    data_zero_equity["Jumlah ekuitas"] = 0
+    ratios_zero_equity = calculate_common_financial_ratios(data_zero_equity)
+    if "error" not in ratios_zero_equity:
+        print(f"  Debt-to-Equity Ratio: {ratios_zero_equity['Debt-to-Equity Ratio']} ({ratios_zero_equity.get('Debt-to-Equity Ratio_note')})")
+
+    print("\n--- Test dengan Liabilitas Jangka Pendek Nol ---")
+    data_zero_curr_liab = data_t_astra_example.copy()
+    data_zero_curr_liab["Jumlah liabilitas jangka pendek"] = 0
+    ratios_zero_curr_liab = calculate_common_financial_ratios(data_zero_curr_liab)
+    if "error" not in ratios_zero_curr_liab:
+        print(f"  Current Ratio: {ratios_zero_curr_liab['Current Ratio']} ({ratios_zero_curr_liab.get('Current Ratio_note')})")
+
+    print("\n--- Test dengan Beban Bunga Nol (Secara Eksplisit) ---")
+    data_zero_interest_exp = data_t_astra_example.copy()
+    data_zero_interest_exp["Beban bunga"] = 0
+    ratios_zero_interest_exp = calculate_common_financial_ratios(data_zero_interest_exp)
+    if "error" not in ratios_zero_interest_exp:
+        print(f"  Interest Coverage Ratio: {ratios_zero_interest_exp['Interest Coverage Ratio']} ({ratios_zero_interest_exp.get('Interest Coverage Ratio_note')})")
     
-    return safe_division(sales, total_assets)
+    print("\n--- Test dengan Penjualan Nol ---")
+    data_zero_sales = data_t_astra_example.copy()
+    data_zero_sales["Pendapatan bersih"] = 0
+    data_zero_sales["Laba bruto"] = 0 # Jika sales 0, laba bruto juga 0
+    data_zero_sales["Laba tahun berjalan"] = 0 # Asumsi laba juga 0
+    ratios_zero_sales = calculate_common_financial_ratios(data_zero_sales)
+    if "error" not in ratios_zero_sales:
+        print(f"  Net Profit Margin: {ratios_zero_sales['Net Profit Margin']:.4f} ({ratios_zero_sales.get('Net Profit Margin_note')})")
+        print(f"  Gross Profit Margin: {ratios_zero_sales['Gross Profit Margin']:.4f} ({ratios_zero_sales.get('Gross Profit Margin_note')})")
+
+    print("\n--- Test dengan semua data finansial minimal yang hilang ---")
+    data_completely_missing = {}
+    ratios_completely_missing = calculate_common_financial_ratios(data_completely_missing)
+    if "error" in ratios_completely_missing:
+        print(f"Error (Data Sangat Minim): {ratios_completely_missing['error']}")

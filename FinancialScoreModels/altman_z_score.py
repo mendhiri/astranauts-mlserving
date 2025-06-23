@@ -1,176 +1,201 @@
-from .financial_ratios import (
-    calculate_x1_working_capital_to_total_assets,
-    calculate_x2_retained_earnings_to_total_assets,
-    calculate_x3_ebit_to_total_assets,
-    calculate_x4_market_value_equity_to_total_liabilities,
-    calculate_x5_sales_to_total_assets
-)
-from .utils import get_value
-
-def calculate_altman_variables(data_t: dict, is_public_company: bool = True, market_value_equity_manual: float = None) -> dict:
+def calculate_altman_z_score(data_t, model_type="public_manufacturing"):
     """
-    Menghitung variabel yang dibutuhkan untuk Altman Z-Score.
+    Menghitung Altman Z-Score untuk memprediksi kebangkrutan perusahaan.
 
     Args:
-        data_t (dict): Data keuangan perusahaan untuk periode t (tahun berjalan),
-                       hasil dari `get_company_financial_data`.
-        is_public_company (bool): True jika perusahaan publik (memengaruhi formula Z-Score dan X4).
-                                   Defaults to True.
-        market_value_equity_manual (float, optional): Nilai pasar ekuitas yang dimasukkan manual
-                                                      (khususnya untuk X4 perusahaan publik). 
-                                                      Jika None, dan `is_public_company` True, maka X4
-                                                      akan None (karena tidak ada di lapkeu standar).
-                                                      Jika `is_public_company` False, argumen ini diabaikan
-                                                      dan nilai buku ekuitas digunakan untuk X4.
-                                                      Defaults to None.
+        data_t (dict): Data keuangan periode t (tahun berjalan).
+                       Struktur: {'nama_item_keuangan': nilai, ...}
+        model_type (str): Jenis model Z-Score yang digunakan. Pilihan:
+                          "public_manufacturing" (default): Untuk perusahaan manufaktur publik.
+                          "private_manufacturing": Untuk perusahaan manufaktur swasta.
+                          "non_manufacturing_or_emerging_markets": Untuk perusahaan non-manufaktur atau pasar berkembang.
+
     Returns:
-        dict: Kamus berisi nilai untuk variabel Altman (X1, X2, X3, X4, X5).
-              Nilai individual bisa None jika data yang diperlukan tidak lengkap.
+        tuple: (float, dict) -> Nilai Altman Z-Score dan dictionary rasio-rasio Altman.
+               Mengembalikan (None, None) jika ada data keuangan penting yang hilang.
     """
-    variables = {}
-    variables['X1'] = calculate_x1_working_capital_to_total_assets(data_t)
-    variables['X2'] = calculate_x2_retained_earnings_to_total_assets(data_t)
-    variables['X3'] = calculate_x3_ebit_to_total_assets(data_t)
+    required_keys = [
+        "Modal kerja bersih", "Jumlah aset", "Laba ditahan",
+        "Laba sebelum pajak penghasilan", "Beban bunga", # Untuk EBIT
+        "Jumlah ekuitas", # Sebagai proxy Market Value of Equity jika tidak ada data pasar
+        "Jumlah liabilitas", "Pendapatan bersih"
+    ]
+
+    for key in required_keys:
+        if key not in data_t:
+            return None, {"error": f"Missing item in data_t for Z-Score: {key}"}
+
+    try:
+        working_capital = float(data_t["Modal kerja bersih"])
+        total_assets = float(data_t["Jumlah aset"])
+        retained_earnings = float(data_t["Laba ditahan"])
+        ebit = float(data_t["Laba sebelum pajak penghasilan"]) + float(data_t["Beban bunga"])
+        # Menggunakan Nilai Buku Ekuitas sebagai proxy untuk Nilai Pasar Ekuitas
+        # Jika nilai pasar ekuitas tersedia, itu harus digunakan.
+        market_value_equity = float(data_t["Jumlah ekuitas"])
+        total_liabilities = float(data_t["Jumlah liabilitas"])
+        sales = float(data_t["Pendapatan bersih"])
+
+    except KeyError as e:
+        return None, {"error": f"KeyError during Z-Score data extraction: {e}"}
+    except ValueError as e:
+        return None, {"error": f"ValueError, data Z-Score tidak dapat dikonversi ke float: {e}"}
+
+    if total_assets == 0:
+        return None, {"error": "Total Assets cannot be zero for Z-Score calculation."}
     
-    if is_public_company:
-        # Untuk perusahaan publik, X4 menggunakan Market Value of Equity.
-        # Jika tidak disediakan secara manual, maka akan None karena tidak ada di lapkeu standar.
-        variables['X4'] = calculate_x4_market_value_equity_to_total_liabilities(data_t, market_value_equity=market_value_equity_manual)
+    ratios = {}
+
+    # X1 = Modal Kerja / Total Aset
+    x1 = working_capital / total_assets
+    ratios["X1 (Working Capital / Total Assets)"] = x1
+
+    # X2 = Laba Ditahan / Total Aset
+    x2 = retained_earnings / total_assets
+    ratios["X2 (Retained Earnings / Total Assets)"] = x2
+
+    # X3 = EBIT / Total Aset
+    x3 = ebit / total_assets
+    ratios["X3 (EBIT / Total Assets)"] = x3
+
+    # X4 = Nilai Pasar Ekuitas / Total Liabilitas
+    # Menggunakan Nilai Buku Ekuitas jika Nilai Pasar tidak tersedia
+    if total_liabilities == 0:
+        # Jika tidak ada liabilitas, perusahaan sangat sehat dari sisi leverage.
+        # Z-score akan sangat tinggi. Untuk menghindari infinity, bisa diberi nilai besar atau disesuaikan.
+        # Altman tidak secara eksplisit menangani ini, tetapi rasio yg sangat tinggi akan menaikkan Z.
+        # Memberi nilai yang cukup tinggi namun terbatas jika market_value_equity > 0
+        x4 = 10.0 if market_value_equity > 0 else 0.0 
     else:
-        # Untuk perusahaan non-publik, X4 menggunakan Book Value of Equity.
-        # Fungsi calculate_x4 akan otomatis menggunakan book value jika market_value_equity_manual adalah None.
-        variables['X4'] = calculate_x4_market_value_equity_to_total_liabilities(data_t, market_value_equity=None) # Paksa pakai book value
-        
-    variables['X5'] = calculate_x5_sales_to_total_assets(data_t)
-    
-    return variables
-
-def calculate_altman_z_score(altman_vars: dict, is_public_company: bool = True) -> float | None:
-    """
-    Menghitung Altman Z-Score.
-    - Model Asli (1968) untuk Perusahaan Manufaktur Publik:
-      Z = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 1.0*X5 
-      (dimana X4 = Market Value of Equity / Book Value of Total Liabilities)
-    - Model Revisi (1983) untuk Perusahaan Privat Manufaktur:
-      Z' = 0.717*X1 + 0.847*X2 + 3.107*X3 + 0.420*X4 + 0.998*X5
-      (dimana X4 = Book Value of Equity / Book Value of Total Liabilities)
-    - Model untuk Perusahaan Non-Manufaktur (1983) (tidak diimplementasikan di sini secara spesifik,
-      namun model publik sering digunakan sebagai generalisasi atau model privat jika non-publik).
-      Z'' = 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4_book
-      (X5 dihilangkan karena variabilitas penjualan antar industri non-manufaktur)
+        x4 = market_value_equity / total_liabilities
+    ratios["X4 (Market Value of Equity / Total Liabilities)"] = x4
+    ratios["X4_note"] = "Using Book Value of Equity as proxy for Market Value"
 
 
-    
-    Referensi formula:
-    - Altman, E. I. (1968). Financial Ratios, Discriminant Analysis and the Prediction of Corporate Bankruptcy.
-    - Altman, E. I. (2000). Predicting financial distress of companies: revisiting the Z-score and ZETA models.
+    # X5 = Penjualan / Total Aset
+    x5 = sales / total_assets
+    ratios["X5 (Sales / Total Assets)"] = x5
 
-    Args:
-        altman_vars (dict): Kamus berisi nilai X1, X2, X3, X4, X5.
-                            Kunci harus sesuai dengan nama variabel tersebut.
-        is_public_company (bool): True jika menggunakan formula untuk perusahaan publik (manufaktur).
-                                   False jika menggunakan formula untuk perusahaan privat (manufaktur).
-                                   Defaults to True.
-
-    Returns:
-        float | None: Nilai Altman Z-Score. Mengembalikan None jika salah satu variabel
-                      yang dibutuhkan (X1-X5 untuk publik/privat) tidak ada (None).
-                      Untuk model publik, jika X4 (berbasis market value) adalah None, skor juga None.
-    """
-    required_vars = ['X1', 'X2', 'X3', 'X4', 'X5']
-    if any(altman_vars.get(var) is None for var in required_vars):
-        # Khusus untuk model non-manufaktur, X5 tidak wajib. Tapi kita tidak implementasi itu dulu.
-        return None
-
-    if is_public_company:
-        # Model asli untuk perusahaan publik manufaktur
-        # Jika X4 (Market Value) tidak ada, skor tidak bisa dihitung dengan model ini.
-        if altman_vars['X4'] is None: 
-            return None # Atau mungkin bisa fallback ke model privat jika diinginkan? Untuk saat ini, None.
-        z_score = (
-            (1.2 * altman_vars['X1']) +
-            (1.4 * altman_vars['X2']) +
-            (3.3 * altman_vars['X3']) +
-            (0.6 * altman_vars['X4']) + # X4 di sini adalah Market Value Equity / Total Liabilities
-            (1.0 * altman_vars['X5'])
-        )
-    else:
-        # Model untuk perusahaan privat manufaktur (menggunakan Book Value Equity untuk X4)
-        z_score = (
-            (0.717 * altman_vars['X1']) +
-            (0.847 * altman_vars['X2']) +
-            (3.107 * altman_vars['X3']) +
-            (0.420 * altman_vars['X4']) + # X4 di sini adalah Book Value Equity / Total Liabilities
-            (0.998 * altman_vars['X5'])
-        )
-    return z_score
-
-def interpret_altman_z_score(score: float, is_public_company: bool = True) -> str:
-    """
-    Memberikan interpretasi kualitatif untuk Altman Z-Score.
-    Zona interpretasi sedikit berbeda untuk model perusahaan publik dan privat.
-
-    Args:
-        score (float | None): Nilai Altman Z-Score. Bisa None jika tidak dapat dihitung.
-        is_public_company (bool): True jika skor dihitung menggunakan model untuk perusahaan publik.
-                                   Defaults to True.
-
-    Returns:
-        str: Interpretasi skor (Zona Aman, Zona Abu-abu, Zona Bahaya).
-    """
-    if score is None:
-        return "Tidak dapat dihitung (data tidak lengkap atau X4 Market Value tidak ada untuk publik)."
-
-    if is_public_company:
-        # Interpretasi untuk Z-Score Perusahaan Publik Manufaktur
-        if score > 2.99:
-            return f"Skor Z = {score:.3f}. Zona Aman (Risiko kebangkrutan rendah)."
-        elif score > 1.81:
-            return f"Skor Z = {score:.3f}. Zona Abu-abu (Perlu perhatian, risiko kebangkrutan sedang)."
-        else:
-            return f"Skor Z = {score:.3f}. Zona Bahaya (Risiko kebangkrutan tinggi)."
-    else:
-        # Interpretasi untuk Z'-Score Perusahaan Privat Manufaktur
-        if score > 2.90: # Beberapa sumber menggunakan 2.6 atau 2.9
-            return f"Skor Z' = {score:.3f}. Zona Aman (Risiko kebangkrutan rendah)."
-        elif score > 1.23: # Beberapa sumber menggunakan 1.1
-            return f"Skor Z' = {score:.3f}. Zona Abu-abu (Perlu perhatian, risiko kebangkrutan sedang)."
-        else:
-            return f"Skor Z' = {score:.3f}. Zona Bahaya (Risiko kebangkrutan tinggi)."
-
-def get_altman_z_score_analysis(data_t: dict, is_public_company: bool = True, market_value_equity_manual: float = None) -> dict:
-    """
-    Menjalankan analisis Altman Z-Score lengkap.
-
-    Args:
-        data_t (dict): Data keuangan perusahaan untuk periode t (tahun berjalan).
-        is_public_company (bool): Flag apakah menggunakan model untuk perusahaan publik atau privat.
-                                   Defaults to True.
-        market_value_equity_manual (float, optional): Nilai pasar ekuitas manual, jika tersedia
-                                                      (terutama untuk model perusahaan publik).
-                                                      Defaults to None.
-
-    Returns:
-        dict: Kamus yang berisi:
-              - "altman_variables": dict dari 5 variabel Altman dan nilainya.
-              - "z_score": float nilai Altman Z-Score (atau None).
-              - "interpretation": str interpretasi dari skor Z.
-              - "model_type": str deskripsi model yang digunakan ("Publik Manufaktur" atau "Privat Manufaktur").
-    """
-    if data_t is None:
-        return {
-            "altman_variables": None,
-            "z_score": None,
-            "interpretation": "Data keuangan periode t tidak tersedia."
+    z_score = None
+    if model_type == "public_manufacturing":
+        # Z-Score untuk Perusahaan Manufaktur Publik (Original Model 1968)
+        # Z = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 1.0*X5 (atau 0.999*X5)
+        z_score = (1.2 * x1) + (1.4 * x2) + (3.3 * x3) + (0.6 * x4) + (0.999 * x5)
+        ratios["model_type"] = "Public Manufacturing (1968)"
+        ratios["interpretation_zones"] = {
+            "Safe Zone": "> 2.99",
+            "Grey Zone": "1.81 - 2.99",
+            "Distress Zone": "< 1.81"
         }
-        
-    altman_vars = calculate_altman_variables(data_t, is_public_company, market_value_equity_manual)
-    z_score = calculate_altman_z_score(altman_vars, is_public_company)
-    interpretation = interpret_altman_z_score(z_score, is_public_company)
-    
-    return {
-        "altman_variables": altman_vars,
-        "z_score": z_score,
-        "interpretation": interpretation,
-        "model_type": "Publik Manufaktur" if is_public_company else "Privat Manufaktur"
+    elif model_type == "private_manufacturing":
+        # Z'-Score untuk Perusahaan Manufaktur Swasta (Revised Model 1983)
+        # Mengganti Market Value of Equity dengan Book Value of Equity di X4
+        # Z' = 0.717*X1 + 0.847*X2 + 3.107*X3 + 0.420*X4 (Book Value) + 0.998*X5
+        # Karena kita sudah menggunakan Book Value untuk X4, kita bisa langsung pakai koefisien ini
+        z_score = (0.717 * x1) + (0.847 * x2) + (3.107 * x3) + (0.420 * x4) + (0.998 * x5)
+        ratios["model_type"] = "Private Manufacturing (1983)"
+        ratios["interpretation_zones"] = {
+            "Safe Zone": "> 2.90", # Beberapa sumber menyebut 2.60
+            "Grey Zone": "1.23 - 2.90", # Beberapa sumber 1.10 - 2.60
+            "Distress Zone": "< 1.23" # Beberapa sumber < 1.10
+        }
+    elif model_type == "non_manufacturing_or_emerging_markets":
+        # Z"-Score untuk Perusahaan Non-Manufaktur / Jasa / Pasar Berkembang (Model 1995, tanpa X5)
+        # Z" = 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4 (Book Value)
+        # Model ini juga menambahkan konstanta 3.25 di beberapa formulasi, tapi ada yang tidak.
+        # Versi yang lebih umum dikutip: Z" = 3.25 + 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4
+        z_score = 3.25 + (6.56 * x1) + (3.26 * x2) + (6.72 * x3) + (1.05 * x4)
+        ratios["model_type"] = "Non-Manufacturing/Emerging Markets (1995)"
+        ratios["interpretation_zones"] = {
+            "Safe Zone": "> 2.60", # Beberapa sumber menyebut 2.90
+            "Grey Zone": "1.10 - 2.60",
+            "Distress Zone": "< 1.10"
+        }
+    else:
+        return None, {"error": f"Invalid model_type for Z-Score: {model_type}. Valid types are 'public_manufacturing', 'private_manufacturing', 'non_manufacturing_or_emerging_markets'."}
+
+    return z_score, ratios
+
+if __name__ == '__main__':
+    # Contoh data (sesuaikan dengan data Astra yang sudah diupdate jika perlu)
+    data_t_astra_example = {
+        "Modal kerja bersih": 4938000000000.0, # Aset Lancar - Liabilitas Jk Pendek
+        "Jumlah aset": 101003000000000.0,
+        "Laba ditahan": 65000000000000.0,
+        "Laba sebelum pajak penghasilan": 22136000000000.0,
+        "Beban bunga": 550000000000.0,
+        "Jumlah ekuitas": 84714000000000.0, # Nilai Buku Ekuitas
+        "Jumlah liabilitas": 16289000000000.0,
+        "Pendapatan bersih": 108249000000000.0
     }
+
+    model_types_to_test = ["public_manufacturing", "private_manufacturing", "non_manufacturing_or_emerging_markets"]
+
+    for mt in model_types_to_test:
+        print(f"\n--- Menghitung Altman Z-Score untuk Model: {mt} ---")
+        z_score_val, z_ratios = calculate_altman_z_score(data_t_astra_example, model_type=mt)
+
+        if z_score_val is not None:
+            print(f"Altman Z-Score ({z_ratios.get('model_type', mt)}): {z_score_val:.4f}")
+            print("Rasio Altman:")
+            for ratio_name, ratio_value in z_ratios.items():
+                if ratio_name not in ["error", "model_type", "interpretation_zones", "X4_note"]:
+                    print(f"  {ratio_name}: {ratio_value:.4f}")
+            if "X4_note" in z_ratios:
+                print(f"  Note for X4: {z_ratios['X4_note']}")
+
+            zones = z_ratios.get("interpretation_zones", {})
+            print("Interpretasi Zona:")
+            if mt == "public_manufacturing":
+                if z_score_val > 2.99: print("  Perusahaan berada di 'Safe Zone'.")
+                elif z_score_val > 1.81: print("  Perusahaan berada di 'Grey Zone'.")
+                else: print("  Perusahaan berada di 'Distress Zone'.")
+            elif mt == "private_manufacturing":
+                if z_score_val > 2.90: print("  Perusahaan berada di 'Safe Zone'.") # Menggunakan batas 2.90
+                elif z_score_val > 1.23: print("  Perusahaan berada di 'Grey Zone'.")
+                else: print("  Perusahaan berada di 'Distress Zone'.")
+            elif mt == "non_manufacturing_or_emerging_markets":
+                # Interpretasi umum: > 2.6 (Aman), 1.1 - 2.6 (Abu-abu), < 1.1 (Distress)
+                if z_score_val > 2.60: print("  Perusahaan berada di 'Safe Zone'.")
+                elif z_score_val > 1.10: print("  Perusahaan berada di 'Grey Zone'.")
+                else: print("  Perusahaan berada di 'Distress Zone'.")
+            
+            print(f"  Zona Detail: {zones}")
+
+        else:
+            print(f"Tidak dapat menghitung Altman Z-Score ({mt}): {z_ratios.get('error', 'Alasan tidak diketahui')}")
+
+    print("\n--- Test dengan Data Hilang ---")
+    data_missing_z = data_t_astra_example.copy()
+    del data_missing_z["Modal kerja bersih"]
+    z_score_missing, z_ratios_missing = calculate_altman_z_score(data_missing_z)
+    if z_score_missing is None:
+        print(f"Berhasil menangani data hilang untuk Z-Score: {z_ratios_missing.get('error')}")
+    else:
+        print(f"Gagal menangani data hilang untuk Z-Score. Score: {z_score_missing}")
+
+    print("\n--- Test dengan Total Aset Nol ---")
+    data_zero_assets_z = data_t_astra_example.copy()
+    data_zero_assets_z["Jumlah aset"] = 0
+    z_score_zero_assets, z_ratios_zero_assets = calculate_altman_z_score(data_zero_assets_z)
+    if z_score_zero_assets is None:
+        print(f"Berhasil menangani Total Aset nol untuk Z-Score: {z_ratios_zero_assets.get('error')}")
+    else:
+        print(f"Gagal menangani Total Aset nol untuk Z-Score. Score: {z_score_zero_assets}")
+
+    print("\n--- Test dengan Total Liabilitas Nol (untuk X4) ---")
+    data_zero_liab_z = data_t_astra_example.copy()
+    data_zero_liab_z["Jumlah liabilitas"] = 0
+    z_score_zero_liab, z_ratios_zero_liab = calculate_altman_z_score(data_zero_liab_z)
+    if z_score_zero_liab is not None:
+        print(f"Altman Z-Score (Total Liabilitas = 0): {z_score_zero_liab:.4f}")
+        print(f"  X4: {z_ratios_zero_liab['X4 (Market Value of Equity / Total Liabilities)']:.4f}")
+    else:
+        print(f"Gagal menghitung Z-Score (Total Liabilitas = 0): {z_ratios_zero_liab.get('error')}")
+
+    print("\n--- Test dengan Model Type Tidak Valid ---")
+    z_score_invalid_model, z_ratios_invalid_model = calculate_altman_z_score(data_t_astra_example, model_type="invalid_model")
+    if z_score_invalid_model is None:
+        print(f"Berhasil menangani model type tidak valid: {z_ratios_invalid_model.get('error')}")
+    else:
+        print(f"Gagal menangani model type tidak valid. Score: {z_score_invalid_model}")

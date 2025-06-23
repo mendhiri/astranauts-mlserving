@@ -100,11 +100,11 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan", "Pajak penghasilan", "Tax expense"]},
     {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan", "Laba bersih", "Net income", "Laba periode berjalan"]},
     {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset", "Total aktiva"]},
-    {"kata_dasar": "Piutang Usaha", "variasi": ["Piutang Usaha", "Piutang Dagang", "Piutang Usaha Pihak Ketiga", "Net Receivables", "Trade Receivables"]},
-    {"kata_dasar": "Aset Tetap", "variasi": ["Aset Tetap", "Total Aset Tetap", "Property, Plant, Equipment, Net", "Aset Tetap Bersih"]},
-    {"kata_dasar": "Aset Tetap Bruto", "variasi": ["Aset Tetap Bruto", "Gross Property Plant Equipment", "Harga Perolehan Aset Tetap", "Aset Tetap (Harga Perolehan)"]},
-    {"kata_dasar": "Akumulasi Penyusutan", "variasi": ["Akumulasi Penyusutan", "Accumulated Depreciation"]},
-    {"kata_dasar": "Modal Kerja Bersih", "variasi": ["Modal Kerja Bersih", "Working Capital", "Modal Kerja"]}, # Dihitung sbg Aset Lancar - Liabilitas Jk Pendek
+    {"kata_dasar": "Piutang usaha", "variasi": ["Piutang usaha", "Piutang Dagang", "Piutang usaha Pihak Ketiga", "Net Receivables", "Trade Receivables"]},
+    {"kata_dasar": "Aset tetap", "variasi": ["Aset tetap", "Total Aset tetap", "Property, Plant, Equipment, Net", "Aset tetap Bersih"]},
+    {"kata_dasar": "Aset tetap bruto", "variasi": ["Aset tetap bruto", "Gross Property Plant Equipment", "Harga Perolehan Aset tetap", "Aset tetap (Harga Perolehan)"]},
+    {"kata_dasar": "Akumulasi penyusutan", "variasi": ["Akumulasi penyusutan", "Accumulated Depreciation"]},
+    {"kata_dasar": "Modal kerja bersih", "variasi": ["Modal kerja bersih", "Working Capital", "Modal Kerja"]}, # Dihitung sbg Aset Lancar - Liabilitas Jk Pendek
     
     # LIABILITAS & EKUITAS (Beberapa sudah ada)
     {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas", "Total kewajiban"]},
