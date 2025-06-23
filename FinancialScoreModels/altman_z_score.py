@@ -116,6 +116,103 @@ def calculate_altman_z_score(data_t, model_type="public_manufacturing"):
 
     return z_score, ratios
 
+def get_altman_z_score_analysis(data_t, is_public_company=True, market_value_equity_manual=None):
+    """
+    Menganalisis perusahaan menggunakan Altman Z-Score.
+
+    Args:
+        data_t (dict): Data keuangan periode t (tahun berjalan).
+        is_public_company (bool): True jika perusahaan publik (menggunakan model manufaktur publik atau non-manufaktur),
+                                  False jika perusahaan manufaktur swasta.
+        market_value_equity_manual (float, optional): Nilai pasar ekuitas manual jika tersedia.
+                                                      Jika None, akan menggunakan nilai buku ekuitas.
+
+    Returns:
+        dict: Hasil analisis Altman Z-Score, termasuk skor, rasio, dan interpretasi.
+    """
+    if data_t is None:
+        return {
+            "z_score": None,
+            "ratios": None,
+            "interpretation": "Data tidak lengkap untuk menghitung Altman Z-Score.",
+            "error": "Data t tidak disediakan."
+        }
+
+    # Tentukan model_type berdasarkan status perusahaan
+    # Ini adalah penyederhanaan. Idealnya, pengguna bisa memilih model yang lebih spesifik.
+    if is_public_company:
+        # Untuk perusahaan publik, kita bisa default ke 'public_manufacturing' atau 'non_manufacturing_or_emerging_markets'.
+        # Keputusan ini bisa bergantung pada ketersediaan data atau jenis industri.
+        # Jika 'Pendapatan bersih' ada, kita bisa condong ke model yang menggunakan X5 (sales).
+        # Untuk contoh ini, kita akan default ke 'public_manufacturing' jika tidak ada info lain.
+        # Jika ingin lebih canggih, bisa cek jenis industri dari data atau input tambahan.
+        model_type = "public_manufacturing" 
+        # Alternatif: jika ada cara untuk menentukan non-manufaktur, gunakan:
+        # model_type = "non_manufacturing_or_emerging_markets"
+    else:
+        model_type = "private_manufacturing"
+
+    # Jika market_value_equity_manual disediakan, coba masukkan ke data_t jika belum ada atau berbeda.
+    # Fungsi calculate_altman_z_score akan menggunakan "Jumlah ekuitas" sebagai proxy jika MVE tidak ada.
+    # Jika kita ingin MVE_manual benar-benar digunakan, kita harus memastikan itu ada di `data_t`
+    # dengan nama kunci yang diharapkan oleh `calculate_altman_z_score` (misalnya, "Nilai Pasar Ekuitas")
+    # atau memodifikasi `calculate_altman_z_score` untuk menerimanya secara langsung.
+    # Untuk saat ini, `calculate_altman_z_score` menggunakan "Jumlah ekuitas" sebagai proxy.
+    # Jika `market_value_equity_manual` diberikan, kita bisa menggunakannya untuk mengganti "Jumlah ekuitas"
+    # khusus untuk perhitungan X4 jika modelnya adalah 'public_manufacturing'.
+    # Namun, `calculate_altman_z_score` saat ini secara internal mengambil `market_value_equity` dari `data_t["Jumlah ekuitas"]`.
+    # Jadi, jika `market_value_equity_manual` diberikan, kita harus mengganti `data_t["Jumlah ekuitas"]` sementara.
+    
+    original_equity_value = None
+    if market_value_equity_manual is not None and model_type == "public_manufacturing":
+        if "Jumlah ekuitas" in data_t:
+            original_equity_value = data_t["Jumlah ekuitas"]
+            data_t["Jumlah ekuitas"] = market_value_equity_manual # Ganti sementara untuk X4
+            # Tambahkan catatan bahwa MVE manual digunakan jika perlu di `ratios` nanti
+            # (calculate_altman_z_score sudah punya X4_note untuk proxy book value)
+
+    z_score, ratios = calculate_altman_z_score(data_t, model_type=model_type)
+
+    # Kembalikan nilai ekuitas asli jika diubah
+    if original_equity_value is not None and "Jumlah ekuitas" in data_t:
+        data_t["Jumlah ekuitas"] = original_equity_value
+
+
+    interpretation = "Tidak dapat diinterpretasi karena skor tidak dihitung."
+    zone = "Unknown"
+
+    if z_score is not None and ratios is not None and "interpretation_zones" in ratios:
+        zones_info = ratios["interpretation_zones"]
+        if model_type == "public_manufacturing":
+            if z_score > 2.99: zone = "Safe Zone"
+            elif z_score > 1.81: zone = "Grey Zone"
+            else: zone = "Distress Zone"
+        elif model_type == "private_manufacturing":
+            if z_score > 2.90: zone = "Safe Zone" # Sesuai implementasi di calculate_altman_z_score
+            elif z_score > 1.23: zone = "Grey Zone"
+            else: zone = "Distress Zone"
+        elif model_type == "non_manufacturing_or_emerging_markets":
+            if z_score > 2.60: zone = "Safe Zone" # Sesuai implementasi di calculate_altman_z_score
+            elif z_score > 1.10: zone = "Grey Zone"
+            else: zone = "Distress Zone"
+        
+        interpretation = f"Perusahaan berada di '{zone}'. Model: {ratios.get('model_type', model_type)}. Zona Detail: {zones_info}"
+        if market_value_equity_manual is not None and model_type == "public_manufacturing":
+             ratios["X4_note"] = "Using provided manual Market Value of Equity for X4."
+
+
+    elif ratios and "error" in ratios:
+        interpretation = f"Error dalam perhitungan: {ratios['error']}"
+        zone = "Error"
+
+    return {
+        "z_score": z_score,
+        "ratios": ratios,
+        "interpretation": interpretation,
+        "zone": zone,
+        "model_used": model_type
+    }
+
 if __name__ == '__main__':
     # Contoh data (sesuaikan dengan data Astra yang sudah diupdate jika perlu)
     data_t_astra_example = {

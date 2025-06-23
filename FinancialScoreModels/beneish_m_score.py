@@ -192,6 +192,45 @@ def calculate_beneish_m_score(data_t, data_t_minus_1):
 
     return m_score, ratios
 
+def get_beneish_m_score_analysis(data_t, data_t_minus_1):
+    """
+    Menganalisis perusahaan menggunakan Beneish M-Score.
+
+    Args:
+        data_t (dict): Data keuangan periode t (tahun berjalan).
+        data_t_minus_1 (dict): Data keuangan periode t-1 (tahun sebelumnya).
+
+    Returns:
+        dict: Hasil analisis Beneish M-Score, termasuk skor, rasio, dan interpretasi.
+    """
+    if data_t is None or data_t_minus_1 is None:
+        return {
+            "m_score": None,
+            "ratios": None,
+            "interpretation": "Data tidak lengkap untuk menghitung Beneish M-Score.",
+            "error": "Data t atau t-1 tidak disediakan."
+        }
+
+    m_score, ratios = calculate_beneish_m_score(data_t, data_t_minus_1)
+    interpretation = "Tidak dapat diinterpretasi karena skor tidak dihitung."
+
+    if m_score is not None:
+        if m_score > -1.78:
+            interpretation = "Kemungkinan besar perusahaan adalah manipulator (manipulator threshold)."
+        elif m_score > -2.22: # Threshold umum, beberapa literatur menggunakan -2.22
+            interpretation = "Zona abu-abu, perlu investigasi lebih lanjut."
+        else:
+            interpretation = "Kemungkinan kecil perusahaan adalah manipulator."
+    elif ratios and "error" in ratios:
+        interpretation = f"Error dalam perhitungan: {ratios['error']}"
+
+
+    return {
+        "m_score": m_score,
+        "ratios": ratios,
+        "interpretation": interpretation
+    }
+
 if __name__ == '__main__':
     data_t_example = {
         "Piutang usaha": 13200000000000.0, "Pendapatan bersih": 108249000000000.0, "Laba bruto": 10511000000000.0,
