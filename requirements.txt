@@ -1,4 +1,9 @@
-google-cloud-vision==3.10.1
+google-cloud-storage
+google-cloud-aiplatform
+vertexai
+ollama
+langchain
+langchain-ollama
 easyocr==1.7.2
 matplotlib==3.10.3
 nltk==3.9.1
@@ -14,3 +19,4 @@ pyocr==0.8.5
 pytesseract==0.3.13
 python-dotenv==1.1.0
 python_docx==1.1.2
+ipython

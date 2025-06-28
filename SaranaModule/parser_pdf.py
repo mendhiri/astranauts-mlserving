@@ -25,51 +25,80 @@ except ImportError:
 
 # Fungsi worker untuk melakukan OCR pada satu halaman secara paralel
 def ocr_satu_halaman_worker_paralel(nomor_halaman_asli: int, data_pixmap_bytes_png: bytes,
-                                    fungsi_ocr_gambar: callable, mesin_ocr: str, 
-                                    opsi_praproses: dict) -> tuple[int, str] | tuple[int, Any] | None:
+                                    fungsi_ocr_gambar: callable, mesin_ocr: str,
+                                    opsi_praproses: dict, prompt_ollama: str) -> tuple[int, str] | tuple[int, Any] | None:
     """
     Worker untuk memproses OCR satu halaman PDF.
     Merender pixmap bytes menjadi gambar, menyimpannya sementara, lalu melakukan OCR.
 
     Args:
-        nomor_halaman_asli: Nomor halaman asli untuk pengurutan.
-        data_pixmap_bytes_png: Bytes dari pixmap halaman dalam format PNG.
-        fungsi_ocr_gambar: Fungsi yang akan dipanggil untuk OCR gambar.
+        nomor_halaman_asli (int): Nomor halaman asli untuk pengurutan.
+        data_pixmap_bytes_png (bytes): Bytes dari pixmap halaman dalam format PNG.
+        fungsi_ocr_gambar (callable): Fungsi yang akan dipanggil untuk OCR gambar (misalnya, `ekstrak_teks_dari_gambar`).
+        mesin_ocr (str): Nama mesin OCR yang akan digunakan ('tesseract', 'ollama', dll.).
+        opsi_praproses (dict): Opsi pra-pemrosesan untuk mesin OCR non-Ollama.
+        prompt_ollama (str): Prompt yang akan digunakan jika `mesin_ocr` adalah 'ollama'.
 
     Returns:
-        Tuple berisi (nomor_halaman_asli, teks_hasil_ocr).
+        tuple[int, str]: Tuple berisi (nomor_halaman_asli, teks_hasil_ocr).
+                         Jika error, teks_hasil_ocr akan berisi pesan error.
     """
-    path_gambar_temporer_worker = f"temp_page_ocr_{nomor_halaman_asli}_{uuid.uuid4()}.png"
+    # Membuat nama file temporer yang unik untuk setiap worker dan halaman
+    # Menggunakan uuid4().hex untuk nama yang lebih pendek dan aman untuk sistem file
+    nama_file_temp_worker = f"temp_pdf_page_{nomor_halaman_asli}_{uuid.uuid4().hex}.png"
+    path_gambar_temporer_worker = os.path.join(".", nama_file_temp_worker) # Simpan di direktori kerja saat ini
+
     teks_hasil_ocr = ""
     try:
+        # Buka gambar dari bytes dan simpan ke file temporer
         gambar_pil = Image.open(io.BytesIO(data_pixmap_bytes_png))
         gambar_pil.save(path_gambar_temporer_worker)
-        # Panggil fungsi OCR dengan parameter tambahan
-        hasil_ocr_mentah = fungsi_ocr_gambar(path_gambar_temporer_worker, 
-                                             mesin_ocr=mesin_ocr, 
-                                             opsi_praproses=opsi_praproses)
         
-        if isinstance(hasil_ocr_mentah, list):
-            teks_hasil_ocr = '\n'.join(hasil_ocr_mentah)
-        else:
-            teks_hasil_ocr = str(hasil_ocr_mentah) # Pastikan string jika bukan list
+        print(f"INFO (Worker Halaman {nomor_halaman_asli}): Melakukan OCR pada '{path_gambar_temporer_worker}' menggunakan mesin '{mesin_ocr}'...")
 
-        return nomor_halaman_asli, teks_hasil_ocr.strip()
-    except Exception as e:
-        print(f"Error di worker OCR untuk halaman {nomor_halaman_asli}: {e}")
-        return nomor_halaman_asli, f"Error OCR halaman {nomor_halaman_asli}: {e}"
+        # Panggil fungsi OCR yang sesuai dengan parameter yang benar
+        if mesin_ocr == 'ollama':
+            hasil_ocr_mentah = fungsi_ocr_gambar(
+                path_gambar_temporer_worker,
+                mesin_ocr=mesin_ocr,
+                prompt_ollama=prompt_ollama # Teruskan prompt_ollama untuk Ollama
+            )
+        else:
+            # Untuk Tesseract, EasyOCR, dll., gunakan opsi_praproses
+            hasil_ocr_mentah = fungsi_ocr_gambar(
+                path_gambar_temporer_worker,
+                mesin_ocr=mesin_ocr,
+                opsi_praproses=opsi_praproses # Teruskan opsi_praproses untuk mesin lain
+            )
+        
+        # Gabungkan hasil jika berupa list (umumnya dari parser_gambar)
+        if isinstance(hasil_ocr_mentah, list):
+            teks_hasil_ocr = '\n'.join(hasil_ocr_mentah).strip()
+        else:
+            teks_hasil_ocr = str(hasil_ocr_mentah).strip() # Pastikan string jika bukan list
+
+        print(f"INFO (Worker Halaman {nomor_halaman_asli}): OCR selesai, teks diekstrak (awal 100 char): '{teks_hasil_ocr[:100]}...'")
+        return nomor_halaman_asli, teks_hasil_ocr
+
+    except Exception as e_ocr_worker:
+        # Log error yang lebih detail
+        error_msg = f"Error di worker OCR untuk halaman {nomor_halaman_asli} ({path_gambar_temporer_worker}): {type(e_ocr_worker).__name__} - {e_ocr_worker}"
+        print(f"ERROR: {error_msg}")
+        return nomor_halaman_asli, f"Error OCR halaman {nomor_halaman_asli}: {e_ocr_worker}"
     finally:
+        # Selalu coba hapus file temporer
         if os.path.exists(path_gambar_temporer_worker):
             try:
                 os.remove(path_gambar_temporer_worker)
-            except Exception as e_rm:
-                print(f"Gagal menghapus file temporer worker {path_gambar_temporer_worker}: {e_rm}")
+            except Exception as e_rm_worker:
+                print(f"PERINGATAN: Gagal menghapus file temporer worker '{path_gambar_temporer_worker}': {e_rm_worker}")
 
 
 # Fungsi utama untuk mengekstrak teks dari berkas PDF dengan caching dan pemrosesan paralel
 def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
                           mesin_ocr: str = 'tesseract', opsi_praproses: dict = None,
-                          direktori_cache_kustom: str | None = None) -> str:
+                          direktori_cache_kustom: str | None = None,
+                          prompt_ollama: str = "get all the data from the image") -> str:
     """
     Mengekstrak teks dari berkas PDF dengan caching. Menggunakan ekstraksi teks langsung jika memungkinkan,
     dan pemrosesan OCR paralel untuk halaman berbasis gambar. Hasil disimpan dan diambil dari cache.
@@ -126,11 +155,12 @@ def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
             with concurrent.futures.ThreadPoolExecutor(max_workers=maks_worker) as executor:
                 futures_ocr = [
                     executor.submit(ocr_satu_halaman_worker_paralel, 
-                                    no_hlm, 
-                                    data_bytes, 
+                                    no_hlm,
+                                    data_bytes,
                                     fungsi_ocr_untuk_gambar,
                                     mesin_ocr,      # Teruskan mesin_ocr
-                                    opsi_praproses  # Teruskan opsi_praproses
+                                    opsi_praproses, # Teruskan opsi_praproses
+                                    prompt_ollama   # Teruskan prompt_ollama
                                    )
                     for no_hlm, data_bytes in halaman_perlu_ocr_data]
 

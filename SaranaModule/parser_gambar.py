@@ -8,7 +8,6 @@ import re  # Untuk membersihkan teks hasil OCR
 import io
 import os
 from dotenv import load_dotenv
-from google.cloud import vision
 
 try:
     import easyocr
@@ -21,98 +20,11 @@ try:
 except ImportError:
     pyocr = None  # Akan ditangani di logika OCR
 
+try:
+    import ollama # Impor ollama untuk fungsionalitas OCR dengan Ollama
+except ImportError:
+    ollama = None # Akan ditangani di logika OCR jika Ollama tidak terinstal
 
-def ekstrak_data_terstruktur_vision(image_path: str) -> list[dict]:
-    """
-    Mengekstrak data terstruktur dari gambar menggunakan Google Vision API.
-
-    Args:
-        image_path: Path ke file gambar.
-
-    Returns:
-        Sebuah list dictionary, dimana setiap dictionary berisi 'text' dan 'bounds'.
-        'bounds' adalah list [x_min, y_min, x_max, y_max].
-        Mengembalikan list kosong jika tidak ada teks terdeteksi atau terjadi error.
-    """
-    load_dotenv()
-    # extracted_data = [] # No longer a list of dicts, will be list of lines (strings)
-    # Initialize lines list
-    # lines_of_text = [] # Removed as per new requirement
-    words_data = []  # This will be the direct output
-
-    credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if credentials_path:
-        print(f"INFO: Menggunakan Google Cloud credentials dari: {credentials_path}")
-    else:
-        print("PERINGATAN: GOOGLE_APPLICATION_CREDENTIALS tidak diatur. Pastikan service account key JSON "
-              "tersedia di path default atau environment variable sudah di-set.")
-
-    try:
-        client = vision.ImageAnnotatorClient()
-
-        if not os.path.exists(image_path):
-            print(f"ERROR: File gambar tidak ditemukan di {image_path}")
-            return []
-
-        with io.open(image_path, 'rb') as image_file:
-            content = image_file.read()
-
-        image = vision.Image(content=content)
-
-        print(f"INFO: Mengirim permintaan ke Google Vision API untuk gambar: {image_path}")
-        response = client.document_text_detection(image=image)
-
-        if response.error.message:
-            raise Exception(
-                f"Google Vision API error: {response.error.message} (Code: {response.error.code})"
-            )
-
-        if response.full_text_annotation:
-            print("INFO: Memproses anotasi teks dari Vision API...")
-            for page in response.full_text_annotation.pages:
-                for block in page.blocks:
-                    for paragraph in block.paragraphs:
-                        for word in paragraph.words:
-                            word_text = ''.join([
-                                symbol.text for symbol in word.symbols
-                            ])
-
-                            # Ekstrak bounding box dan konversi ke format [x_min, y_min, x_max, y_max]
-                            vertices = word.bounding_box.vertices
-                            x_coords = [v.x for v in vertices]
-                            y_coords = [v.y for v in vertices]
-
-                            x_min = min(x_coords)
-                            y_min = min(y_coords)
-                            x_max = max(x_coords)
-                            y_max = max(y_coords)
-
-                            bounds = [x_min, y_min, x_max, y_max]
-
-                            words_data.append({'text': word_text, 'bounds': bounds})
-
-            if not words_data:
-                print("INFO: Tidak ada kata yang diekstrak dari Vision API.")
-                return []
-
-            print(f"INFO: Ekstraksi kata selesai. {len(words_data)} kata terdeteksi.")
-            # Line grouping logic removed as per new requirements.
-            # The function will now return words_data directly.
-
-        else:
-            print("INFO: Tidak ada anotasi teks ditemukan dalam respons Vision API.")
-            return []  # Return empty list if no text annotation
-
-    except FileNotFoundError:
-        print(f"ERROR: File gambar tidak ditemukan di path: {image_path}")
-        return []  # Return empty list on file not found
-    except Exception as e:
-        print(f"ERROR: Terjadi kesalahan saat memproses gambar dengan Google Vision API: {e}")
-        # Opsional: bisa raise error lagi atau kembalikan list kosong sebagai indikasi kegagalan
-        # raise e
-        return []  # Return empty list on other errors
-
-    return words_data
 
 DEFAULT_OPSI_PRAPROSES = {
     'dpi_target': 600,
@@ -268,19 +180,82 @@ def bersihkan_satu_baris(line_text: str) -> str:
     cleaned_line = re.sub(r'\s+', ' ', line_text).strip()
     return cleaned_line
 
+def ocr_dengan_ollama(path_gambar: str, prompt_pengguna: str = "get all the data from the image") -> list[str]:
+    """
+    Mengekstrak teks dari gambar menggunakan Ollama dengan model Llama 3.2-Vision.
+    Args:
+        path_gambar: Path ke file gambar.
+        prompt_pengguna: Prompt yang akan diberikan ke model Ollama.
+    Returns:
+        Sebuah list string, di mana setiap string adalah baris teks yang terdeteksi.
+        Mengembalikan list kosong jika terjadi error atau tidak ada teks terdeteksi.
+    """
+    if ollama is None:
+        print("ERROR: Pustaka Ollama tidak terinstal. Tidak dapat melakukan OCR dengan Ollama. Silakan install dengan `pip install ollama`.")
+        return []
+    
+    try:
+        if not os.path.exists(path_gambar):
+            print(f"ERROR: File gambar tidak ditemukan di {path_gambar} untuk Ollama OCR.")
+            return []
+
+        # Pastikan model vision yang diinginkan ada, jika tidak beri tahu pengguna
+        # Ini hanya contoh, idealnya daftar model diambil dari ollama.list() jika perlu pengecekan dinamis
+        # Untuk sekarang, kita asumsikan pengguna tahu model 'llama3.2-vision' perlu ada.
+        
+        print(f"INFO: Memulai OCR dengan Ollama model 'llama3.2-vision' untuk gambar: {os.path.basename(path_gambar)}")
+        response = ollama.chat(
+            model="llama3.2-vision", # Model spesifik untuk vision
+            messages=[{
+                "role": "user",
+                "content": prompt_pengguna,
+                "images": [path_gambar]
+            }],
+            # Pertimbangkan menambahkan timeout di sini jika library ollama mendukungnya secara langsung
+            # atau jika menggunakan ollama.Client, timeout bisa diset di sana.
+        )
+        
+        if response and response.get('message') and response['message'].get('content'):
+            extracted_text = response['message']['content'].strip()
+            print(f"INFO: Teks berhasil diekstrak oleh Ollama (awal 200 char): {extracted_text[:200]}...")
+            return extracted_text.splitlines() # Kembalikan sebagai list baris
+        else:
+            print("INFO: Tidak ada konten teks yang diekstrak oleh Ollama.")
+            return []
+            
+    except ollama.ResponseError as e: # Menangkap error spesifik dari API Ollama
+        print(f"ERROR: Ollama API error saat OCR: Status {e.status_code} - {e.error}")
+        if e.status_code == 404: # Model not found
+             print("PASTIKAN MODEL 'llama3.2-vision' TELAH DIUNDUH DI OLLAMA SERVER (ollama pull llama3.2-vision).")
+        return []
+    except Exception as e: # Menangkap error umum lainnya (misal, koneksi)
+        error_type = type(e).__name__
+        print(f"ERROR: Terjadi kesalahan ({error_type}) saat melakukan OCR dengan Ollama: {e}")
+        if "Connection refused" in str(e) or "Failed to connect" in str(e) or "Max retries exceeded with url" in str(e):
+            print("PASTIKAN OLLAMA SERVER BERJALAN DAN DAPAT DIAKSES.")
+        return []
 
 # Definisikan fungsi utama untuk mengekstrak teks dari gambar
-def ekstrak_teks_dari_gambar(path_gambar: str, mesin_ocr: str = 'tesseract', opsi_praproses: dict = None) -> list[str]:
+def ekstrak_teks_dari_gambar(path_gambar: str, mesin_ocr: str = 'tesseract', opsi_praproses: dict = None, prompt_ollama: str = "get all the data from the image") -> list[str]:
     """
-    Mengekstrak teks dari gambar menggunakan berbagai mesin OCR setelah pra-pemrosesan yang dapat dikonfigurasi.
+    Mengekstrak teks dari gambar menggunakan berbagai mesin OCR. 
+    Jika 'ollama' dipilih, pra-pemrosesan gambar umumnya dilewati karena model vision modern
+    seringkali bekerja lebih baik dengan gambar asli.
+
     Args:
-        path_gambar: Path berkas ke gambar.
-        mesin_ocr: 'tesseract', 'easyocr', 'pyocr_tesseract', 'pyocr_cuneiform'.
-        opsi_praproses: Dictionary untuk mengontrol langkah-langkah pra-pemrosesan.
-                        Jika None, DEFAULT_OPSI_PRAPROSES akan digunakan.
+        path_gambar (str): Path berkas ke gambar.
+        mesin_ocr (str): Pilihan mesin OCR: 
+                         'tesseract', 'easyocr', 'pyocr_tesseract', 'pyocr_cuneiform', 'ollama'.
+                         Default ke 'tesseract'.
+        opsi_praproses (dict, optional): Dictionary untuk mengontrol langkah-langkah pra-pemrosesan
+                                         jika mesin_ocr BUKAN 'ollama'. Jika None, 
+                                         DEFAULT_OPSI_PRAPROSES akan digunakan.
+        prompt_ollama (str, optional): Prompt yang akan digunakan jika `mesin_ocr` adalah 'ollama'.
+                                      Default: "get all the data from the image".
+
     Returns:
-        Sebuah list string, di mana setiap string adalah baris teks yang terdeteksi dan dibersihkan.
-        Mengembalikan list kosong jika terjadi error atau tidak ada teks terdeteksi.
+        list[str]: Sebuah list string, di mana setiap string adalah baris teks yang terdeteksi dan dibersihkan.
+                   Mengembalikan list kosong jika terjadi error atau tidak ada teks terdeteksi.
     """
     final_options = DEFAULT_OPSI_PRAPROSES.copy()
     if opsi_praproses is not None:
@@ -366,148 +341,185 @@ def ekstrak_teks_dari_gambar(path_gambar: str, mesin_ocr: str = 'tesseract', ops
         # cv2.imwrite("processed_for_ocr.png", processed_img)
 
         # (Logika OCR akan ditambahkan/diperbarui di sini)
-        gambar_untuk_ocr = processed_img  # Ini adalah gambar final untuk OCR
-
-        if mesin_ocr == 'easyocr':
-            if easyocr is None:
-                print("Error: easyocr tidak terinstal. Install dengan 'pip install easyocr'.")
+        
+        # --- Pemilihan Mesin OCR ---
+        if mesin_ocr == 'ollama':
+            if ollama is None: # Cek lagi di sini untuk keamanan ganda
+                print("ERROR: Pustaka Ollama tidak terinstal. Tidak dapat menggunakan 'ollama' sebagai mesin OCR.")
                 return []
 
-            reader = easyocr.Reader(['id', 'en'], gpu=opsi_praproses['easyocr_gpu'])
-            raw_results = reader.readtext(gambar_untuk_ocr, detail=1, paragraph=False)
+            # Untuk Ollama, pra-pemrosesan gambar yang kompleks biasanya tidak diperlukan atau bahkan
+            # dapat menurunkan kualitas input untuk model vision. Model vision modern lebih suka gambar asli.
+            # Kita akan menggunakan path_gambar asli. Jika path_gambar tidak valid (misal, dari stream),
+            # gambar_pil (yang sudah di-set DPI) bisa disimpan ke file temporer.
 
-            if not raw_results:
-                return []
+            temp_ollama_input_path = None
+            image_to_use_for_ollama = path_gambar
 
-            text_blocks = []
-            for (bbox, text, conf) in raw_results:
-                if text.strip():
-                    text_blocks.append({
-                        'text': text,
-                        'x_min': int(bbox[0][0]),
-                        'y_min': int(bbox[0][1])
-                    })
+            if not os.path.exists(path_gambar):
+                # Jika path_gambar asli tidak valid, coba simpan gambar_pil yang sudah ada
+                temp_ollama_input_path = f"temp_ollama_ocr_input_{uuid.uuid4().hex}.png"
+                try:
+                    print(f"INFO: path_gambar asli ('{path_gambar}') tidak ditemukan. Menyimpan gambar dari memori ke '{temp_ollama_input_path}' untuk Ollama.")
+                    gambar_pil.save(temp_ollama_input_path) # gambar_pil adalah Image.open(path_gambar) di awal
+                    image_to_use_for_ollama = temp_ollama_input_path
+                except Exception as e_save_temp:
+                    print(f"ERROR: Gagal menyimpan gambar temporer untuk Ollama: {e_save_temp}")
+                    return []
+            
+            lines_result = ocr_dengan_ollama(image_to_use_for_ollama, prompt_pengguna=prompt_ollama)
+            
+            if temp_ollama_input_path and os.path.exists(temp_ollama_input_path):
+                try:
+                    os.remove(temp_ollama_input_path)
+                except Exception as e_rm_temp:
+                    print(f"PERINGATAN: Gagal menghapus file temporer Ollama '{temp_ollama_input_path}': {e_rm_temp}")
+            
+        # --- Blok untuk mesin OCR lainnya (Tesseract, EasyOCR, dll.) yang menggunakan pra-pemrosesan ---
+        else:
+            # Untuk mesin OCR tradisional, gunakan gambar yang telah diproses (`processed_img`)
+            gambar_untuk_ocr = processed_img 
 
-            text_blocks.sort(key=lambda b: (b['y_min'], b['x_min']))
+            if mesin_ocr == 'easyocr':
+                if easyocr is None:
+                    print("Error: easyocr tidak terinstal. Install dengan 'pip install easyocr'.")
+                    return []
 
-            reconstructed_lines = []
-            current_line_elements = []
-            Y_TOLERANCE = 10
+                reader = easyocr.Reader(['id', 'en'], gpu=opsi_praproses['easyocr_gpu'])
+                raw_results = reader.readtext(gambar_untuk_ocr, detail=1, paragraph=False)
 
-            for block in text_blocks:
-                if not current_line_elements:
-                    current_line_elements.append(block)
-                else:
-                    last_block_y_min = current_line_elements[-1]['y_min']
-                    if abs(block['y_min'] - last_block_y_min) <= Y_TOLERANCE:
+                if not raw_results:
+                    return []
+
+                text_blocks = []
+                for (bbox, text, conf) in raw_results:
+                    if text.strip():
+                        text_blocks.append({
+                            'text': text,
+                            'x_min': int(bbox[0][0]),
+                            'y_min': int(bbox[0][1])
+                        })
+
+                text_blocks.sort(key=lambda b: (b['y_min'], b['x_min']))
+
+                reconstructed_lines = []
+                current_line_elements = []
+                Y_TOLERANCE = 10
+
+                for block in text_blocks:
+                    if not current_line_elements:
                         current_line_elements.append(block)
                     else:
-                        line_text = ' '.join([elem['text'] for elem in current_line_elements])
-                        cleaned_line = bersihkan_satu_baris(line_text)  # Use new cleaner
-                        if cleaned_line:
-                            reconstructed_lines.append(cleaned_line)
-                        current_line_elements = [block]
+                        last_block_y_min = current_line_elements[-1]['y_min']
+                        if abs(block['y_min'] - last_block_y_min) <= Y_TOLERANCE:
+                            current_line_elements.append(block)
+                        else:
+                            line_text = ' '.join([elem['text'] for elem in current_line_elements])
+                            cleaned_line = bersihkan_satu_baris(line_text)  # Use new cleaner
+                            if cleaned_line:
+                                reconstructed_lines.append(cleaned_line)
+                            current_line_elements = [block]
 
-            if current_line_elements:
-                line_text = ' '.join([elem['text'] for elem in current_line_elements])
-                cleaned_line = bersihkan_satu_baris(line_text)  # Use new cleaner
-                if cleaned_line:
-                    reconstructed_lines.append(cleaned_line)
+                if current_line_elements:
+                    line_text = ' '.join([elem['text'] for elem in current_line_elements])
+                    cleaned_line = bersihkan_satu_baris(line_text)  # Use new cleaner
+                    if cleaned_line:
+                        reconstructed_lines.append(cleaned_line)
 
-            lines_result = reconstructed_lines
+                lines_result = reconstructed_lines
 
-        elif mesin_ocr == 'tesseract':
-            pil_img_for_tesseract = Image.fromarray(gambar_untuk_ocr)
-            data = pytesseract.image_to_data(
-                pil_img_for_tesseract,
-                lang=opsi_praproses.get('pyocr_lang', 'ind+eng'),
-                config=opsi_praproses['tesseract_config'],
-                output_type=Output.DICT
-            )
+            elif mesin_ocr == 'tesseract':
+                pil_img_for_tesseract = Image.fromarray(gambar_untuk_ocr)
+                data = pytesseract.image_to_data(
+                    pil_img_for_tesseract,
+                    lang=opsi_praproses.get('pyocr_lang', 'ind+eng'),
+                    config=opsi_praproses['tesseract_config'],
+                    output_type=Output.DICT
+                )
 
-            lines_data = {}
-            n_boxes = len(data['level'])
-            for i in range(n_boxes):
-                if data['level'][i] == 5:
-                    word_text = data['text'][i].strip()
-                    if word_text:
-                        line_key = (data['page_num'][i], data['block_num'][i], data['par_num'][i], data['line_num'][i])
-                        if line_key not in lines_data:
-                            lines_data[line_key] = []
-                        lines_data[line_key].append(word_text)
+                lines_data = {}
+                n_boxes = len(data['level'])
+                for i in range(n_boxes):
+                    if data['level'][i] == 5:
+                        word_text = data['text'][i].strip()
+                        if word_text:
+                            line_key = (data['page_num'][i], data['block_num'][i], data['par_num'][i], data['line_num'][i])
+                            if line_key not in lines_data:
+                                lines_data[line_key] = []
+                            lines_data[line_key].append(word_text)
 
-            reconstructed_lines = []
-            sorted_line_keys = sorted(lines_data.keys())
+                reconstructed_lines = []
+                sorted_line_keys = sorted(lines_data.keys())
 
-            for key in sorted_line_keys:
-                line_text = ' '.join(lines_data[key])
-                cleaned_line = bersihkan_satu_baris(line_text)  # Use new cleaner
-                if cleaned_line:
-                    reconstructed_lines.append(cleaned_line)
+                for key in sorted_line_keys:
+                    line_text = ' '.join(lines_data[key])
+                    cleaned_line = bersihkan_satu_baris(line_text)  # Use new cleaner
+                    if cleaned_line:
+                        reconstructed_lines.append(cleaned_line)
 
-            lines_result = reconstructed_lines
+                lines_result = reconstructed_lines
 
-        elif mesin_ocr == 'pyocr_tesseract':
-            if pyocr is None:
-                print("Error: pyocr tidak terinstal. Install dengan 'pip install pyocr'.")
+            elif mesin_ocr == 'pyocr_tesseract':
+                if pyocr is None:
+                    print("Error: pyocr tidak terinstal. Install dengan 'pip install pyocr'.")
+                    return []
+                tools = pyocr.get_available_tools()
+                if not tools:
+                    print("Error: Tidak ada tool PyOCR yang tersedia.")
+                    return []
+
+                tool_tesseract = None
+                for tool_item in tools:
+                    if 'Tesseract' in tool_item.get_name():
+                        tool_tesseract = tool_item
+                        break
+
+                if tool_tesseract is None:
+                    print("Error: Tool Tesseract untuk PyOCR tidak ditemukan.")
+                    return []
+
+                pil_img_for_pyocr = Image.fromarray(gambar_untuk_ocr)
+                raw_text_output = tool_tesseract.image_to_string(
+                    pil_img_for_pyocr,
+                    lang=opsi_praproses['pyocr_lang'],
+                    builder=pyocr.builders.TextBuilder()
+                )
+                raw_lines = raw_text_output.splitlines()
+                cleaned_lines = [bersihkan_satu_baris(line) for line in raw_lines]
+                lines_result = [line for line in cleaned_lines if line]  # Filter empty lines
+
+            elif mesin_ocr == 'pyocr_cuneiform':
+                if pyocr is None:
+                    print("Error: pyocr tidak terinstal. Install dengan 'pip install pyocr'.")
+                    return []
+                tools = pyocr.get_available_tools()
+                if not tools:
+                    print("Error: Tidak ada tool PyOCR yang tersedia.")
+                    return []
+
+                tool_cuneiform = None
+                for tool_item in tools:
+                    if 'Cuneiform' in tool_item.get_name().lower():
+                        tool_cuneiform = tool_item
+                        break
+
+                if tool_cuneiform is None:
+                    print("Error: Tool Cuneiform untuk PyOCR tidak ditemukan.")
+                    return []
+
+                pil_img_for_pyocr = Image.fromarray(gambar_untuk_ocr)
+                raw_text_output = tool_cuneiform.image_to_string(
+                    pil_img_for_pyocr,
+                    lang=opsi_praproses['pyocr_lang'],
+                    builder=pyocr.builders.TextBuilder()
+                )
+                raw_lines = raw_text_output.splitlines()
+                cleaned_lines = [bersihkan_satu_baris(line) for line in raw_lines]
+                lines_result = [line for line in cleaned_lines if line]  # Filter empty lines
+
+            else:
+                print(f"Mesin OCR '{mesin_ocr}' tidak dikenal.")
                 return []
-            tools = pyocr.get_available_tools()
-            if not tools:
-                print("Error: Tidak ada tool PyOCR yang tersedia.")
-                return []
-
-            tool_tesseract = None
-            for tool_item in tools:
-                if 'Tesseract' in tool_item.get_name():
-                    tool_tesseract = tool_item
-                    break
-
-            if tool_tesseract is None:
-                print("Error: Tool Tesseract untuk PyOCR tidak ditemukan.")
-                return []
-
-            pil_img_for_pyocr = Image.fromarray(gambar_untuk_ocr)
-            raw_text_output = tool_tesseract.image_to_string(
-                pil_img_for_pyocr,
-                lang=opsi_praproses['pyocr_lang'],
-                builder=pyocr.builders.TextBuilder()
-            )
-            raw_lines = raw_text_output.splitlines()
-            cleaned_lines = [bersihkan_satu_baris(line) for line in raw_lines]
-            lines_result = [line for line in cleaned_lines if line]  # Filter empty lines
-
-        elif mesin_ocr == 'pyocr_cuneiform':
-            if pyocr is None:
-                print("Error: pyocr tidak terinstal. Install dengan 'pip install pyocr'.")
-                return []
-            tools = pyocr.get_available_tools()
-            if not tools:
-                print("Error: Tidak ada tool PyOCR yang tersedia.")
-                return []
-
-            tool_cuneiform = None
-            for tool_item in tools:
-                if 'Cuneiform' in tool_item.get_name().lower():
-                    tool_cuneiform = tool_item
-                    break
-
-            if tool_cuneiform is None:
-                print("Error: Tool Cuneiform untuk PyOCR tidak ditemukan.")
-                return []
-
-            pil_img_for_pyocr = Image.fromarray(gambar_untuk_ocr)
-            raw_text_output = tool_cuneiform.image_to_string(
-                pil_img_for_pyocr,
-                lang=opsi_praproses['pyocr_lang'],
-                builder=pyocr.builders.TextBuilder()
-            )
-            raw_lines = raw_text_output.splitlines()
-            cleaned_lines = [bersihkan_satu_baris(line) for line in raw_lines]
-            lines_result = [line for line in cleaned_lines if line]  # Filter empty lines
-
-        else:
-            print(f"Mesin OCR '{mesin_ocr}' tidak dikenal.")
-            return []
 
         return lines_result  # Each branch now populates lines_result
 
