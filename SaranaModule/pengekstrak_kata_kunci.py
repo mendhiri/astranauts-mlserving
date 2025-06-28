@@ -702,90 +702,154 @@ def ekstrak_data_keuangan_tahunan(
     if not teks_dokumen or not isinstance(teks_dokumen, str):
         return data_hasil_ekstraksi
 
-    # Normalisasi teks dokumen menjadi satu baris panjang untuk mempermudah regex split nanti
-    # Namun, untuk logika pencarian baris-demi-baris, kita akan split berdasarkan newline asli dulu
-    original_lines = [line.strip().lower() for line in teks_dokumen.splitlines() if line.strip()]
+    # Langkah 1: Pra-pemrosesan teks_dokumen untuk menggabungkan baris yang terpisah secara tidak wajar.
+    # Heuristik: Jika sebuah baris diakhiri dengan \n dan baris berikutnya dimulai dengan huruf kecil,
+    # atau jika baris berikutnya dimulai dengan spasi diikuti huruf kecil (menandakan kelanjutan yang indent),
+    # maka \n tersebut kemungkinan adalah pemisah karena layout, bukan akhir kalimat.
+    # Kita juga ingin mempertahankan \n yang diikuti oleh angka (misalnya, daftar bernomor atau nilai di baris baru).
+    # Atau \n yang diikuti oleh huruf besar (awal kalimat baru atau item baru).
     
-    # tahun_pelaporan = identifikasi_tahun_pelaporan(teks_dokumen) # Belum digunakan aktif
-
-    MAX_LINES_TO_SEARCH_AFTER_KEYWORD = 3 # Max non-empty lines to check after the keyword's line
-    MAX_VALUES_TO_CAPTURE = 2 # Untuk t dan t-1
+    # Langkah 1: Pra-pemrosesan teks_dokumen - Mengubah semua newline menjadi spasi dan menormalkan spasi.
+    processed_text = teks_dokumen.replace("\n", " ")
+    processed_text = re.sub(r"\s+", " ", processed_text).strip().lower()
+    
+    MAX_VALUES_TO_CAPTURE = 2
+    MAX_TOKENS_AFTER_KEYWORD_TO_SEARCH = 25 # Tingkatkan sedikit jarak pencarian token
 
     for info_kata_kunci in daftar_kata_kunci:
         kata_dasar_target = info_kata_kunci["kata_dasar"]
-        ditemukan_nilai_untuk_kata_dasar_ini = False # Flag untuk menghentikan pencarian variasi jika sudah ketemu
+        ditemukan_nilai_untuk_kata_dasar_ini = False
 
         for variasi in info_kata_kunci["variasi"]:
             if ditemukan_nilai_untuk_kata_dasar_ini:
-                break # Sudah ditemukan dari variasi lain untuk kata_dasar_target ini
+                break
 
             variasi_lower = variasi.lower()
-            
-            for line_idx, current_line_content in enumerate(original_lines):
+            current_search_pos = 0
+
+            # Kasus khusus untuk "Arus kas bersih yang diperoleh dari aktivitas investasi"
+            if kata_dasar_target == "Arus kas bersih yang diperoleh dari aktivitas investasi" and \
+               variasi_lower == "arus kas bersih yang diperoleh dari aktivitas investasi":
+                
+                # Pola regex: "frasa_awal" diikuti oleh teks apapun (non-greedy), lalu dua angka, 
+                # lalu teks apapun lagi, lalu "frasa_akhir"
+                # Grup 1 & 2 akan menangkap angka-angkanya.
+                # Kita buat lebih fleksibel untuk menangkap angka di antara frasa awal dan akhir.
+                # Frasa awal: "arus kas bersih yang diperoleh dari"
+                # Frasa akhir: "aktivitas investasi"
+                # Teks di antaranya bisa: ANGKA1 ANGKA2 "net cash flows provided from"
+                
+                # Pola untuk menangkap blok teks antara "dari" dan "aktivitas investasi"
+                # dan kemudian mengekstrak angka dari blok tersebut.
+                # Kita mencari angka *setelah* "dari" dan *sebelum* "aktivitas investasi" jika terpisah.
+                
+                # Pola 1: Mencari "arus kas bersih yang diperoleh dari [ANGKA1] [ANGKA2] ... aktivitas investasi"
+                # Ini akan menangkap angka yang berada di antara frasa awal dan akhir yang dipisahkan oleh teks lain.
+                # re.escape melindungi dari karakter khusus regex dalam frasa.
+                # ([\s\S]*?) menangkap semua karakter termasuk newline (jika ada sisa) secara non-greedy.
+                # ((?:\(?\s*[\d.,]+\s*\)?\s*){1,2}) akan mencoba menangkap satu atau dua angka.
+                
+                # Pola yang lebih sederhana: cari frasa awal, lalu cari frasa akhir setelahnya.
+                # Kemudian ekstrak angka dari teks DI ANTARA match frasa awal dan match frasa akhir.
+                
+                part1 = "arus kas bersih yang diperoleh dari"
+                part2 = "aktivitas investasi"
+                
+                # Cari posisi akhir dari part1
+                idx1_end = -1
+                search_regex_start = 0
+                match1 = None
+                
+                # Loop untuk menemukan semua kemunculan part1, karena bisa jadi ada beberapa.
+                while True:
+                    temp_match1 = re.search(re.escape(part1), processed_text[search_regex_start:])
+                    if not temp_match1:
+                        break # Tidak ada lagi part1
+                    
+                    # match1_start_global = search_regex_start + temp_match1.start() # Tidak digunakan saat ini
+                    idx1_end_global = search_regex_start + temp_match1.end()
+
+                    # Cari part2 setelah idx1_end_global
+                    # Batasi pencarian part2 dalam jarak tertentu dari part1, misal 150 karakter
+                    search_window_for_part2 = processed_text[idx1_end_global : min(len(processed_text), idx1_end_global + 150)]
+                    match2 = re.search(re.escape(part2), search_window_for_part2)
+
+                    if match2:
+                        # Kedua bagian ditemukan
+                        text_between_parts = search_window_for_part2[:match2.start()]
+                        
+                        # Periksa apakah ini pasangan yang salah (misalnya, part1 dari operasi, part2 dari investasi)
+                        if "aktivitas operasi" in text_between_parts and kata_dasar_target == "Arus kas bersih yang diperoleh dari aktivitas investasi":
+                            search_regex_start = idx1_end_global # Lanjutkan pencarian part1 berikutnya
+                            continue # Coba pasangan part1/part2 berikutnya
+                        
+                        # Ekstrak angka dari text_between_parts
+                        potential_values = re.findall(r"\(?\s*([\d.,]+)\s*\)?", text_between_parts)
+                        
+                        values_found_for_this_instance = []
+                        for val_str in potential_values:
+                            norm_val = normalisasi_nilai_keuangan(val_str)
+                            if norm_val is not None:
+                                values_found_for_this_instance.append(norm_val * pengali_global)
+                                if len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
+                                    break
+                        
+                        if values_found_for_this_instance:
+                            # Pastikan kita tidak mengambil nilai yang terlalu sedikit jika ada banyak angka sampah
+                            # Hanya ambil jika setidaknya satu nilai valid ditemukan dan kita belum menemukan untuk kata dasar ini.
+                            # Atau jika kita menemukan lebih banyak/lebih baik. Untuk sekarang, ambil yang pertama.
+                            data_hasil_ekstraksi[kata_dasar_target]['t'] = values_found_for_this_instance[0]
+                            if len(values_found_for_this_instance) > 1:
+                                data_hasil_ekstraksi[kata_dasar_target]['t-1'] = values_found_for_this_instance[1]
+                            else:
+                                data_hasil_ekstraksi[kata_dasar_target]['t-1'] = None
+                            ditemukan_nilai_untuk_kata_dasar_ini = True
+                            break # Keluar dari loop while True (pencarian part1)
+                    
+                    search_regex_start = idx1_end_global # Lanjutkan pencarian part1 setelah match saat ini
+                
                 if ditemukan_nilai_untuk_kata_dasar_ini:
-                    break
+                    break # Keluar dari loop variasi
+                else:
+                    continue # Lanjut ke variasi berikutnya jika regex khusus ini tidak berhasil
 
-                keyword_pos = current_line_content.find(variasi_lower)
-                if keyword_pos != -1:
-                    # Keyword ditemukan
-                    values_found_for_this_instance = [] # Kumpulkan nilai untuk instance kata kunci ini
+            # Logika pencarian standar (jika bukan kasus khusus atau kasus khusus gagal)
+            while current_search_pos < len(processed_text):
+                keyword_pos = processed_text.find(variasi_lower, current_search_pos)
+                if keyword_pos == -1:
+                    break # Tidak ada lagi kemunculan variasi ini
 
-                    # 1. Cari di sisa baris yang sama
-                    text_after_keyword_on_same_line = current_line_content[keyword_pos + len(variasi_lower):]
-                    # Tokenisasi dengan hati-hati: split berdasarkan spasi, tapi juga pertimbangkan angka yang mungkin terpisah oleh newline palsu
-                    # Untuk saat ini, split sederhana dengan spasi setelah join newline di atas.
-                    # Regex \s+ akan menangani spasi ganda.
-                    potential_value_strings_same_line = re.split(r'\s+', text_after_keyword_on_same_line.strip())
-                    
-                    for token in potential_value_strings_same_line:
-                        if not token: continue # Lewati token kosong
-                        normalized_val = normalisasi_nilai_keuangan(token)
-                        if normalized_val is not None:
-                            values_found_for_this_instance.append(normalized_val * pengali_global)
-                            if len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
-                                break
-                    
-                    # 2. Jika belum cukup nilai, cari di baris berikutnya
-                    if len(values_found_for_this_instance) < MAX_VALUES_TO_CAPTURE:
-                        lines_searched_count = 0
-                        for lookahead_idx in range(line_idx + 1, len(original_lines)):
-                            if lines_searched_count >= MAX_LINES_TO_SEARCH_AFTER_KEYWORD or \
-                               len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
-                                break
+                values_found_for_this_instance = []
+                text_after_keyword = processed_text[keyword_pos + len(variasi_lower):]
+                potential_value_tokens = re.split(r'\s+', text_after_keyword.strip())
+                
+                tokens_checked = 0
+                for token_idx, token in enumerate(potential_value_tokens):
+                    if not token or tokens_checked >= MAX_TOKENS_AFTER_KEYWORD_TO_SEARCH:
+                        break
+                    tokens_checked += 1
 
-                            next_line_content = original_lines[lookahead_idx]
-                            if not next_line_content: # Lewati baris kosong (meskipun sudah difilter di awal)
-                                continue
-                            
-                            lines_searched_count += 1
-
-                            # Berhenti jika ada kata kunci lain (bukan variasi dari kata_dasar_target saat ini) ditemukan
-                            if is_another_keyword_present(next_line_content, kata_dasar_target, daftar_kata_kunci):
-                                break 
-
-                            potential_value_strings_next_line = re.split(r'\s+', next_line_content.strip())
-                            for token in potential_value_strings_next_line:
-                                if not token: continue
-                                normalized_val = normalisasi_nilai_keuangan(token)
-                                if normalized_val is not None:
-                                    values_found_for_this_instance.append(normalized_val * pengali_global)
-                                    if len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
-                                        break
-                            if len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
-                                break # dari loop lookahead_idx
-                    
-                    # Setelah mencari di baris yang sama dan berikutnya untuk instance keyword ini
-                    if values_found_for_this_instance:
-                        data_hasil_ekstraksi[kata_dasar_target]['t'] = values_found_for_this_instance[0]
-                        if len(values_found_for_this_instance) > 1:
-                            data_hasil_ekstraksi[kata_dasar_target]['t-1'] = values_found_for_this_instance[1]
-                        ditemukan_nilai_untuk_kata_dasar_ini = True # Tandai bahwa sudah ditemukan untuk kata_dasar_target ini
-                        break # Keluar dari loop line_idx, lanjut ke variasi berikutnya (atau kata_dasar berikutnya jika ini sudah selesai)
+                    normalized_val = normalisasi_nilai_keuangan(token)
+                    if normalized_val is not None:
+                        text_between_keyword_and_value = " ".join(potential_value_tokens[:token_idx])
+                        if is_another_keyword_present(text_between_keyword_and_value, kata_dasar_target, daftar_kata_kunci):
+                            break 
+                        values_found_for_this_instance.append(normalized_val * pengali_global)
+                        if len(values_found_for_this_instance) >= MAX_VALUES_TO_CAPTURE:
+                            break
+                
+                if values_found_for_this_instance:
+                    data_hasil_ekstraksi[kata_dasar_target]['t'] = values_found_for_this_instance[0]
+                    if len(values_found_for_this_instance) > 1:
+                        data_hasil_ekstraksi[kata_dasar_target]['t-1'] = values_found_for_this_instance[1]
+                    else:
+                        data_hasil_ekstraksi[kata_dasar_target]['t-1'] = None
+                    ditemukan_nilai_untuk_kata_dasar_ini = True
+                    break 
+                
+                current_search_pos = keyword_pos + len(variasi_lower)
             
-            # if ditemukan_nilai_untuk_kata_dasar_ini: # Ini sudah ditangani di atas
-            #     break # Keluar dari loop variasi
-        
-        # Tidak perlu assign di sini lagi karena sudah di dalam loop
-        # data_hasil_ekstraksi[kata_dasar_target] = nilai_final_untuk_kata_dasar
+            if ditemukan_nilai_untuk_kata_dasar_ini:
+                break 
         
     return data_hasil_ekstraksi
