@@ -6,6 +6,7 @@
             "Jumlah aset tidak lancar": 79502000000000.0,
             "Jumlah liabilitas jangka pendek": 15275000000000.0,
             "Jumlah liabilitas jangka panjang": 1851000000000.0,
+            "Jumlah liabilitas": 15275000000000.0,
             "Jumlah ekuitas": 84058000000000.0,
             "Jumlah liabilitas dan ekuitas": 101184000000000.0,
             "Pendapatan bersih": 106427000000000.0,
@@ -16,7 +17,8 @@
             "Laba tahun berjalan": 30931000000000.0,
             "Jumlah aset": 21682000000000.0,
             "Piutang usaha": 2023000000000.0,
-            "Aset tetap": 15472000000000.0,
+            "Aset tetap bruto": 15472000000000.0,
+            "Laba ditahan": 425000000000.0,
             "Beban bunga": -132000000000.0,
             "Beban penjualan": -5974000000000.0,
             "Beban administrasi dan umum": 302000000000.0

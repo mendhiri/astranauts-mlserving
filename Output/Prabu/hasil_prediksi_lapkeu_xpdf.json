@@ -1,26 +1,19 @@
 {
   "company_name": "lapkeu_x.pdf",
-  "credit_risk_score": 80,
+  "credit_risk_score": 100,
   "risk_category": "Low Risk",
-  "beneish_m_score": -1.489024128986188,
-  "altman_z_score": 5.891915879929719,
+  "beneish_m_score": null,
+  "altman_z_score": 13.29127996418801,
   "beneish_ratios": {
-    "DSRI": 0.9653668856063334,
-    "GMI": 1.0840673179476137,
-    "AQI": 0.9857707196815935,
-    "SGI": 1.1394631578947367,
-    "DEPI": 1.0,
-    "SGAI": 0.9653668856063337,
-    "LVGI": 1.0134011272343797,
-    "TATA": 0.1834202944466996
+    "error": "Missing item in data_t: Beban penyusutan"
   },
   "altman_ratios": {
-    "X1 (Working Capital / Total Assets)": 0.04888963694147699,
-    "X2 (Retained Earnings / Total Assets)": 0.6435452412304585,
-    "X3 (EBIT / Total Assets)": 0.22460718988544895,
-    "X4 (Market Value of Equity / Total Liabilities)": 5.200687580575849,
+    "X1 (Working Capital / Total Assets)": 0.25667948851231936,
+    "X2 (Retained Earnings / Total Assets)": 0.022091693523235263,
+    "X3 (EBIT / Total Assets)": 1.1444536854142842,
+    "X4 (Market Value of Equity / Total Liabilities)": 5.924055944055944,
     "X4_note": "Using Book Value of Equity as proxy for Market Value",
-    "X5 (Sales / Total Assets)": 1.0717404433531676,
+    "X5 (Sales / Total Assets)": 5.626832311051045,
     "model_type": "Public Manufacturing (1968)",
     "interpretation_zones": {
       "Safe Zone": "> 2.99",
@@ -30,18 +23,18 @@
   },
   "underlying_ratios": {
     "current_ratio": 1.3453146853146853,
-    "debt_to_equity_ratio": 0.1922822673938192,
-    "debt_ratio": 0.1612724374523529,
+    "debt_to_equity_ratio": 0.16880326746464575,
+    "debt_ratio": 0.7433205114876806,
     "net_profit_margin": 0.2001034651590315,
     "roe": 0.2556956347238945,
-    "roa_ebit": 0.22460718988544895,
-    "sales_growth": 0.13946315789473684
+    "roa_ebit": 1.1444536854142842,
+    "sales_growth": 0.01711971586157648
   },
-  "score_points": 7,
+  "score_points": 4,
   "reasons": [
-    "D/E Rendah (0.19)",
+    "D/E Rendah (0.17)",
     "Current Ratio Cukup (1.35)",
-    "ICR Baik (41.25)",
+    "ICR Rendah (-185.02)",
     "NPM Baik (20.01%)"
   ]
 }

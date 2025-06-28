@@ -91,6 +91,7 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar", "Aset tidak lancar"]},
     {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek", "Liabilitas jangka pendek"]},
     {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang", "Liabilitas jangka panjang"]},
+    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas", "Liabilitas"]},
     {"kata_dasar": "Jumlah ekuitas", "variasi": ["Jumlah ekuitas", "Total ekuitas", "Ekuitas"]},
     {"kata_dasar": "Jumlah liabilitas dan ekuitas", "variasi": ["Jumlah liabilitas dan ekuitas", "Total liabilitas dan ekuitas", "Liabilitas dan ekuitas"]},
     {"kata_dasar": "Pendapatan bersih", "variasi": ["Pendapatan bersih", "Penjualan bersih", "Total pendapatan", "Total penjualan"]},
@@ -101,21 +102,16 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan", "Laba bersih", "Net income", "Laba periode berjalan"]},
     {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset", "Total aktiva"]},
     {"kata_dasar": "Piutang usaha", "variasi": ["Piutang usaha", "Piutang Dagang", "Piutang usaha Pihak Ketiga", "Net Receivables", "Trade Receivables"]},
-    {"kata_dasar": "Aset tetap", "variasi": ["Aset tetap", "Total Aset tetap", "Property, Plant, Equipment, Net", "Aset tetap Bersih"]},
-    {"kata_dasar": "Aset tetap bruto", "variasi": ["Aset tetap bruto", "Gross Property Plant Equipment", "Harga Perolehan Aset tetap", "Aset tetap (Harga Perolehan)"]},
+    # {"kata_dasar": "Aset tetap", "variasi": ["Aset tetap", "Total Aset tetap", "Property, Plant, Equipment, Net", "Aset tetap Bersih"]},
+    {"kata_dasar": "Aset tetap bruto", "variasi": ["Aset tetap, setelah dikurangi akumulasi depresiasi sebesar", "Aset tetap, setelah dikurangi"]},
     {"kata_dasar": "Akumulasi penyusutan", "variasi": ["Akumulasi penyusutan", "Accumulated Depreciation"]},
     {"kata_dasar": "Modal kerja bersih", "variasi": ["Modal kerja bersih", "Working Capital", "Modal Kerja"]}, # Dihitung sbg Aset Lancar - Liabilitas Jk Pendek
     {"kata_dasar": "Laba ditahan", "variasi": ["Laba ditahan", "Saldo laba", "Retained earnings", "Saldo laba yang belum ditentukan penggunaannya"]},
     {"kata_dasar": "Beban bunga", "variasi": ["Beban bunga", "Interest expense", "Biaya keuangan", "Biaya bunga", "Beban keuangan"]},
-    {"kata_dasar": "Beban penyusutan", "variasi": ["Beban penyusutan", "Beban depresiasi", "Penyusutan dan amortisasi", "Depreciation and amortization expense"]},
+    {"kata_dasar": "Beban penyusutan", "variasi": ["Beban penyusutan", "Beban depresiasi", "Depresiasi dan amortisasi", "Depreciation and amortization expense"]},
     {"kata_dasar": "Beban penjualan", "variasi": ["Beban penjualan", "Selling expenses"]},
     {"kata_dasar": "Beban administrasi dan umum", "variasi": ["Beban administrasi dan umum", "General and administrative expenses", "Beban umum dan administrasi"]},
     {"kata_dasar": "Beban usaha", "variasi": ["Beban usaha", "Beban operasi", "Total beban usaha"]}, # Bisa mencakup SGA + Penyusutan
-
-    # ARUS KAS (Beberapa sudah ada)
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas operasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas operasi", "Arus kas bersih dari aktivitas operasi", "Arus kas dari operasi", "Net cash from operating activities", "Arus kas operasi bersih"]},
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas investasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas investasi", "Arus kas bersih dari aktivitas investasi", "Arus kas dari investasi", "Net cash from investing activities", "Arus kas investasi bersih"]},
-    {"kata_dasar": "Arus kas bersih yang digunakan untuk aktivitas pendanaan", "variasi": ["Arus kas bersih yang digunakan untuk aktivitas pendanaan", "Arus kas bersih dari aktivitas pendanaan", "Arus kas dari pendanaan", "Net cash from financing activities", "Arus kas pendanaan bersih"]},
 
     # Istilah untuk tahun lalu (digunakan jika Sarana tidak bisa otomatis membedakan t dan t-1)
     # Ini adalah pendekatan sementara dan mungkin tidak ideal.

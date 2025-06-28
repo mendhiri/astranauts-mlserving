@@ -15,10 +15,11 @@ def calculate_altman_z_score(data_t, model_type="public_manufacturing"):
                Mengembalikan (None, None) jika ada data keuangan penting yang hilang.
     """
     required_keys = [
-        "Modal kerja bersih", "Jumlah aset", "Laba ditahan",
+        "Jumlah aset lancar", "Jumlah aset", "Laba ditahan",
         "Laba sebelum pajak penghasilan", "Beban bunga", # Untuk EBIT
         "Jumlah ekuitas", # Sebagai proxy Market Value of Equity jika tidak ada data pasar
-        "Jumlah liabilitas", "Pendapatan bersih"
+        "Jumlah liabilitas", "Pendapatan bersih",
+        "Jumlah liabilitas jangka pendek"
     ]
 
     for key in required_keys:
@@ -26,7 +27,7 @@ def calculate_altman_z_score(data_t, model_type="public_manufacturing"):
             return None, {"error": f"Missing item in data_t for Z-Score: {key}"}
 
     try:
-        working_capital = float(data_t["Modal kerja bersih"])
+        working_capital = float(data_t["Jumlah aset lancar"]) - float(data_t["Jumlah liabilitas jangka pendek"])
         total_assets = float(data_t["Jumlah aset"])
         retained_earnings = float(data_t["Laba ditahan"])
         ebit = float(data_t["Laba sebelum pajak penghasilan"]) + float(data_t["Beban bunga"])

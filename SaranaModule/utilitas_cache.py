@@ -9,15 +9,18 @@ NAMA_DIREKTORI_CACHE_DEFAULT = ".cache_parser_dokumen"  # Indonesianized name
 
 
 # Fungsi untuk membuat kunci cache yang unik berdasarkan path file dan timestamp modifikasi
-def buat_kunci_cache_file(path_file: str) -> str | None:
+def buat_kunci_cache_file(path_file: str, extra_key_info: str | None = None) -> str | None:
     """
-    Membuat kunci cache unik untuk sebuah file berdasarkan path absolut dan timestamp modifikasi terakhirnya.
+    Membuat kunci cache unik untuk sebuah file berdasarkan path absolut,
+    timestamp modifikasi terakhirnya, dan informasi tambahan opsional.
 
     Args:
         path_file: Path ke file yang akan dibuatkan kunci cache.
+        extra_key_info: String opsional untuk ditambahkan ke data sebelum hashing,
+                        memungkinkan variasi cache untuk file yang sama (misalnya, metode parsing berbeda).
 
     Returns:
-        String hexdigest SHA256 sebagai kunci cache, atau None jika file tidak ditemukan.
+        String hexdigest SHA256 sebagai kunci cache, atau None jika file tidak ditemukan atau error.
     """
     try:
         # Dapatkan path absolut untuk konsistensi
@@ -27,6 +30,8 @@ def buat_kunci_cache_file(path_file: str) -> str | None:
 
         # Buat string unik yang akan di-hash
         string_untuk_hash = f"{path_absolut}|{timestamp_modifikasi}"
+        if extra_key_info:
+            string_untuk_hash += f"|{extra_key_info}"
 
         # Buat objek hash SHA256
         hash_objek = hashlib.sha256(string_untuk_hash.encode('utf-8'))
