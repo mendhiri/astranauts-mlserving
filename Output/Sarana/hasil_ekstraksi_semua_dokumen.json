@@ -1,26 +1,5 @@
 [
     {
-        "nama_file": "lapkeu_x.pdf",
-        "hasil_ekstraksi": {
-            "Jumlah aset lancar": 19238000000000.0,
-            "Jumlah aset tidak lancar": 81765000000000.0,
-            "Jumlah liabilitas jangka pendek": 14300000000000.0,
-            "Jumlah liabilitas jangka panjang": 1989000000000.0,
-            "Jumlah ekuitas": 84714000000000.0,
-            "Jumlah liabilitas dan ekuitas": 101003000000000.0,
-            "Pendapatan bersih": 108249000000000.0,
-            "Beban pokok pendapatan": -97738000000000.0,
-            "Laba bruto": 10511000000000.0,
-            "Laba sebelum pajak penghasilan": 22136000000000.0,
-            "Beban pajak penghasilan": -475000000000.0,
-            "Laba tahun berjalan": 21661000000000.0,
-            "Jumlah aset": 19238000000000.0,
-            "Piutang usaha": 1000000000.0,
-            "Aset tetap": 15697000000000.0,
-            "Laba ditahan": 425000000000.0,
-            "Beban bunga": -119000000000.0,
-            "Beban penjualan": -5298000000000.0,
-            "Beban administrasi dan umum": 322000000000.0
-        }
+        "info": "Tidak ada data (t) yang diekstrak dari dokumen manapun."
     }
 ]

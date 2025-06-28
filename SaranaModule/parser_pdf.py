@@ -1,6 +1,7 @@
 # Impor pustaka yang diperlukan
 from typing import Any
 import pymupdf
+import pdfplumber
 import io
 from PIL import Image
 import os
@@ -211,3 +212,163 @@ def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
     finally:
         if dokumen_pdf:
             dokumen_pdf.close()
+
+# Fungsi untuk mengekstrak teks dari PDF menggunakan pdfplumber
+def ekstrak_teks_dari_pdf_pdfplumber(path_file_pdf: str) -> str:
+    """
+    Mengekstrak teks dari berkas PDF menggunakan pdfplumber.
+    Fokus pada ekstraksi teks mentah dari semua halaman.
+
+    Args:
+        path_file_pdf: Path berkas ke file .pdf.
+
+    Returns:
+        Teks yang diekstrak dari semua halaman, atau pesan error.
+    """
+    print(f"INFO: Memulai ekstraksi teks dari '{os.path.basename(path_file_pdf)}' menggunakan pdfplumber.")
+    semua_teks_halaman = []
+    try:
+        with pdfplumber.open(path_file_pdf) as pdf:
+            if not pdf.pages:
+                print(f"PERINGATAN: Tidak ada halaman ditemukan dalam PDF '{os.path.basename(path_file_pdf)}' oleh pdfplumber.")
+                return ""
+            
+            for i, page in enumerate(pdf.pages):
+                # Coba ekstrak teks; jika halaman tidak ada teks, extract_text() akan mengembalikan None atau string kosong
+                teks_halaman = page.extract_text(x_tolerance=3, y_tolerance=3, layout=False, x_density=7.25, y_density=13)
+                if teks_halaman:
+                    semua_teks_halaman.append(teks_halaman.strip())
+                else:
+                    # Jika extract_text tidak menghasilkan apa-apa, mungkin halaman adalah gambar.
+                    # Untuk saat ini, kita tidak melakukan OCR di sini, hanya teks.
+                    print(f"INFO: Halaman {i+1} di '{os.path.basename(path_file_pdf)}' tidak menghasilkan teks via pdfplumber.extract_text(). Mungkin halaman berbasis gambar.")
+            
+            if not semua_teks_halaman:
+                print(f"PERINGATAN: Tidak ada teks yang berhasil diekstrak dari '{os.path.basename(path_file_pdf)}' menggunakan pdfplumber.")
+                return ""
+
+        hasil_gabungan_pdfplumber = "\n\n".join(semua_teks_halaman)
+        print(f"INFO: Ekstraksi teks dengan pdfplumber dari '{os.path.basename(path_file_pdf)}' selesai. Total karakter: {len(hasil_gabungan_pdfplumber)}")
+        return hasil_gabungan_pdfplumber
+
+    except FileNotFoundError:
+        return f"Error memproses berkas PDF dengan pdfplumber: Berkas tidak ditemukan di {path_file_pdf}"
+    except Exception as e:
+        return f"Error umum memproses berkas PDF '{os.path.basename(path_file_pdf)}' dengan pdfplumber: {type(e).__name__} - {e}"
+
+
+# Fungsi utama untuk mengekstrak teks dari berkas PDF dengan caching dan pemrosesan paralel
+def ekstrak_teks_dari_pdf(path_file_pdf: str, fungsi_ocr_untuk_gambar: callable,
+                          mesin_ocr: str = 'tesseract', opsi_praproses: dict = None,
+                          direktori_cache_kustom: str | None = None,
+                          prompt_ollama: str = "get all the data from the image",
+                          metode_parsing: str = 'pymupdf') -> str: # Tambahkan parameter metode_parsing
+    """
+    Mengekstrak teks dari berkas PDF dengan caching. Menggunakan ekstraksi teks langsung jika memungkinkan,
+    dan pemrosesan OCR paralel untuk halaman berbasis gambar (jika metode_parsing='pymupdf').
+    Jika metode_parsing='pdfplumber', akan menggunakan pdfplumber untuk ekstraksi teks.
+    Hasil disimpan dan diambil dari cache.
+
+    Args:
+        path_file_pdf: Path berkas ke file .pdf.
+        fungsi_ocr_untuk_gambar: Fungsi callable untuk OCR gambar (untuk PyMuPDF).
+        mesin_ocr: Nama mesin OCR yang akan digunakan (untuk PyMuPDF).
+        opsi_praproses: Dictionary opsi pra-pemrosesan (untuk PyMuPDF).
+        direktori_cache_kustom: Path opsional ke direktori cache.
+        prompt_ollama: Prompt untuk Ollama OCR (untuk PyMuPDF).
+        metode_parsing: Metode parsing PDF ('pymupdf' atau 'pdfplumber').
+
+    Returns:
+        Teks yang diekstrak dari semua halaman, atau pesan error.
+    """
+    # Modifikasi kunci cache untuk menyertakan metode parsing
+    kunci_cache_dokumen = buat_kunci_cache_file(path_file_pdf, extra_key_info=f"method:{metode_parsing}")
+
+    if kunci_cache_dokumen:
+        data_cache = ambil_dari_cache(kunci_cache_dokumen, direktori_cache_kustom)
+        if data_cache is not None and isinstance(data_cache, dict) and 'teks_dokumen' in data_cache:
+            print(f"Mengambil hasil dari cache untuk: {os.path.basename(path_file_pdf)} (Metode: {metode_parsing})")
+            return data_cache['teks_dokumen']
+    else:
+        return f"Error memproses berkas PDF: Berkas tidak ditemukan di {path_file_pdf} (saat membuat kunci cache)."
+
+    print(f"Cache tidak ditemukan atau tidak valid untuk {os.path.basename(path_file_pdf)} (Metode: {metode_parsing}), memproses dari awal.")
+
+    hasil_teks_final = ""
+
+    if metode_parsing == 'pdfplumber':
+        hasil_teks_final = ekstrak_teks_dari_pdf_pdfplumber(path_file_pdf)
+        # Untuk pdfplumber, kita tidak melakukan filter "entitas induk" di sini,
+        # karena pdfplumber diasumsikan mengekstrak teks dari PDF yang tidak memerlukan OCR per halaman
+        # dan filter entitas induk lebih relevan untuk output OCR yang mungkin berisik.
+        # Jika diperlukan, filter bisa ditambahkan setelah pemanggilan ini.
+    
+    elif metode_parsing == 'pymupdf':
+        dokumen_pdf_pymupdf = None
+        try:
+            dokumen_pdf_pymupdf = pymupdf.open(path_file_pdf)
+            jumlah_halaman = len(dokumen_pdf_pymupdf)
+            
+            def is_entitas_induk_page(page_text_content: str) -> bool:
+                if not page_text_content: return False
+                search_area = page_text_content[:200].lower()
+                return "entitas induk" in search_area or "parent entity" in search_area
+
+            semua_bagian_teks = [None] * jumlah_halaman
+            halaman_perlu_ocr_data = []
+
+            for nomor_halaman in range(jumlah_halaman):
+                halaman = dokumen_pdf_pymupdf.load_page(nomor_halaman)
+                teks_langsung = halaman.get_text("text").strip()
+                if teks_langsung:
+                    semua_bagian_teks[nomor_halaman] = teks_langsung
+                else:
+                    pix = halaman.get_pixmap()
+                    data_pixmap_bytes_png = pix.tobytes("png")
+                    halaman_perlu_ocr_data.append((nomor_halaman, data_pixmap_bytes_png))
+
+            if halaman_perlu_ocr_data:
+                maks_worker = min(8, os.cpu_count() + 4 if os.cpu_count() else 4)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=maks_worker) as executor:
+                    futures_ocr = [
+                        executor.submit(ocr_satu_halaman_worker_paralel, 
+                                        no_hlm, data_bytes, fungsi_ocr_untuk_gambar,
+                                        mesin_ocr, opsi_praproses, prompt_ollama)
+                        for no_hlm, data_bytes in halaman_perlu_ocr_data]
+
+                    for future in concurrent.futures.as_completed(futures_ocr):
+                        try:
+                            no_hlm_hasil, teks_ocr_hasil = future.result()
+                            semua_bagian_teks[no_hlm_hasil] = teks_ocr_hasil
+                        except Exception as e_future:
+                            print(f"Error saat mengambil hasil dari future OCR: {e_future}")
+            
+            teks_final_dari_entitas_induk_saja = []
+            for i, teks_halaman_tunggal in enumerate(semua_bagian_teks):
+                if teks_halaman_tunggal is None: continue
+                if is_entitas_induk_page(teks_halaman_tunggal):
+                    teks_final_dari_entitas_induk_saja.append(teks_halaman_tunggal)
+            
+            if not teks_final_dari_entitas_induk_saja:
+                print(f"INFO (PyMuPDF): Tidak ada halaman 'Entitas Induk' yang ditemukan dalam {os.path.basename(path_file_pdf)}.")
+                hasil_teks_final = "" 
+            else:
+                hasil_teks_final = "\n\n".join(teks_final_dari_entitas_induk_saja)
+
+        except FileNotFoundError:
+            return f"Error (PyMuPDF): Berkas tidak ditemukan di {path_file_pdf}"
+        except Exception as e:
+            return f"Error umum (PyMuPDF) '{os.path.basename(path_file_pdf)}': {e}"
+        finally:
+            if dokumen_pdf_pymupdf:
+                dokumen_pdf_pymupdf.close()
+    else:
+        return f"Error: Metode parsing '{metode_parsing}' tidak dikenal. Pilih 'pymupdf' atau 'pdfplumber'."
+
+    # Simpan hasil ke cache (untuk kedua metode)
+    if kunci_cache_dokumen: # Periksa lagi karena bisa jadi None jika file tidak ada di awal
+        print(f"Menyimpan hasil ke cache untuk: {os.path.basename(path_file_pdf)} (Metode: {metode_parsing})")
+        data_untuk_disimpan = {'teks_dokumen': hasil_teks_final, 'timestamp_pembuatan_cache': time.time()}
+        simpan_ke_cache(kunci_cache_dokumen, data_untuk_disimpan, direktori_cache_kustom)
+    
+    return hasil_teks_final
