@@ -105,11 +105,6 @@ DAFTAR_KATA_KUNCI_KEUANGAN_DEFAULT = [
     {"kata_dasar": "Aset tetap bruto", "variasi": ["Aset tetap bruto", "Gross Property Plant Equipment", "Harga Perolehan Aset tetap", "Aset tetap (Harga Perolehan)"]},
     {"kata_dasar": "Akumulasi penyusutan", "variasi": ["Akumulasi penyusutan", "Accumulated Depreciation"]},
     {"kata_dasar": "Modal kerja bersih", "variasi": ["Modal kerja bersih", "Working Capital", "Modal Kerja"]}, # Dihitung sbg Aset Lancar - Liabilitas Jk Pendek
-    
-    # LIABILITAS & EKUITAS (Beberapa sudah ada)
-    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas", "Total kewajiban"]},
-    # Jumlah ekuitas sudah ada -> bisa dipakai utk Nilai Buku Ekuitas
-
     {"kata_dasar": "Laba ditahan", "variasi": ["Laba ditahan", "Saldo laba", "Retained earnings", "Saldo laba yang belum ditentukan penggunaannya"]},
     {"kata_dasar": "Beban bunga", "variasi": ["Beban bunga", "Interest expense", "Biaya keuangan", "Biaya bunga", "Beban keuangan"]},
     {"kata_dasar": "Beban penyusutan", "variasi": ["Beban penyusutan", "Beban depresiasi", "Penyusutan dan amortisasi", "Depreciation and amortization expense"]},

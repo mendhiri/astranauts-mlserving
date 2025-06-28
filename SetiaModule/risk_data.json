@@ -1,0 +1,75 @@
+{
+  "risiko_negara": {
+    "Indonesia": "Menengah",
+    "Singapura": "Rendah",
+    "Malaysia": "Rendah",
+    "Vietnam": "Menengah",
+    "Thailand": "Menengah",
+    "Filipina": "Menengah ke Tinggi",
+    "Myanmar": "Sangat Tinggi"
+  },
+  "risiko_industri": {
+    "Keuangan": {
+      "Perbankan (BUKU IV/III)": "Rendah",
+      "Perbankan (BUKU II/I)": "Menengah",
+      "Multi-Finance": "Menengah ke Tinggi",
+      "Teknologi Finansial (P2P Lending)": "Tinggi",
+      "Asuransi": "Menengah"
+    },
+    "Pertambangan": {
+      "Batu Bara": "Tinggi",
+      "Nikel": "Menengah ke Tinggi",
+      "Emas": "Menengah",
+      "Timah": "Menengah"
+    },
+    "Agrikultur": {
+      "Kelapa Sawit (CPO)": "Menengah ke Tinggi",
+      "Karet": "Menengah",
+      "Kopi & Kakao": "Menengah",
+      "Perikanan & Akuakultur": "Menengah",
+      "Kehutanan": "Tinggi"
+    },
+    "Properti & Konstruksi": {
+      "Pengembang Properti Residensial": "Menengah",
+      "Properti Komersial & Industri": "Menengah ke Tinggi",
+      "Konstruksi Infrastruktur": "Menengah",
+      "Semen & Material Bangunan": "Menengah"
+    },
+    "Manufaktur": {
+      "Otomotif & Komponen": "Menengah",
+      "Tekstil & Garmen": "Menengah ke Tinggi",
+      "Makanan & Minuman (F&B)": "Rendah",
+      "Farmasi": "Rendah ke Menengah",
+      "Kimia Dasar": "Menengah"
+    },
+    "Perdagangan & Ritel": {
+      "Ritel Barang Konsumsi Primer (FMCG)": "Rendah",
+      "Ritel Elektronik & Furnitur": "Menengah",
+      "Ritel Fashion & Gaya Hidup": "Menengah ke Tinggi",
+      "Distributor & Grosir": "Rendah ke Menengah"
+    },
+    "Teknologi & Komunikasi": {
+      "Telekomunikasi": "Rendah ke Menengah",
+      "Menara Telekomunikasi": "Rendah",
+      "E-commerce & Pasar Digital": "Menengah",
+      "Perangkat Lunak (SaaS)": "Rendah ke Menengah"
+    },
+    "Transportasi & Logistik": {
+      "Logistik & Pergudangan": "Rendah ke Menengah",
+      "Penerbangan": "Tinggi",
+      "Transportasi Darat": "Menengah",
+      "Pelayaran & Kepelabuhan": "Menengah"
+    },
+    "Energi": {
+      "Minyak & Gas (Hulu & Hilir)": "Tinggi",
+      "Kelistrikan (Utilitas)": "Rendah",
+      "Energi Terbarukan": "Menengah"
+    },
+    "Layanan & Lainnya": {
+      "Kesehatan (Rumah Sakit)": "Rendah ke Menengah",
+      "Pendidikan": "Rendah",
+      "Perhotelan & Pariwisata": "Menengah ke Tinggi",
+      "Media & Periklanan": "Menengah"
+    }
+  }
+}

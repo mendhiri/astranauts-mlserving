@@ -1,0 +1,6 @@
+google-cloud-storage
+google-cloud-aiplatform
+vertexai
+functions-framework
+pandas
+ipython
