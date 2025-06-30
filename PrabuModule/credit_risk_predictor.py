@@ -1,5 +1,3 @@
-# from FinancialScoreModels.utils import get_value # get_value tidak ada di utils.py
-
 def get_financial_ratios_for_prabu(financial_data_t: dict, financial_data_t_minus_1: dict = None) -> dict:
     """
     Menghitung rasio keuangan dasar yang mungkin berguna untuk prediksi risiko kredit.
