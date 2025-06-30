@@ -1,12 +1,5 @@
 [
     {
-        "nama_file": "FinancialStatement-2025-I-AALI.pdf",
-        "hasil_ekstraksi": {
-            "Jumlah ekuitas": 22641918.0,
-            "Jumlah liabilitas dan ekuitas": 28793225.0
-        }
-    },
-    {
         "nama_file": "lapkeu_x.pdf",
         "hasil_ekstraksi": {
             "Jumlah aset lancar": 21682000000000.0,

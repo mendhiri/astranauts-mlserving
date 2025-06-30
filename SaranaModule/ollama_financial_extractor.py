@@ -93,15 +93,14 @@ def extract_financial_data_from_image_ollama(
         # Langkah 1: Ekstrak teks mentah dari gambar menggunakan model vision Ollama
         actual_vision_prompt = vision_model_prompt
         if not actual_vision_prompt:
+            # Modified default vision prompt to be more focused
             actual_vision_prompt = (
-                "You are an expert OCR system specialized in financial documents. "
-                "Extract ALL text from the provided image. Preserve the layout and structure as much as possible. "
-                "Pay close attention to numerical figures, financial terms, and table structures. "
-                "The document is likely a balance sheet, income statement, or cash flow statement. "
-                "Ensure high accuracy of transcription."
+                "Prioritaskan ekstraksi teks yang berkaitan dengan item dan angka keuangan dari dokumen ini. "
+                "Fokus pada tabel, angka, dan istilah keuangan yang relevan. "
+                "Ekstrak teks seakurat mungkin dari area tersebut."
             )
         
-        print(f"INFO: Mengirim gambar {os.path.basename(image_path)} ke model vision Ollama ({vision_model_name})...")
+        print(f"INFO: Mengirim gambar {os.path.basename(image_path)} ke model vision Ollama ({vision_model_name}) dengan prompt terfokus...")
         vision_response = ollama_client.chat(
             model=vision_model_name,
             messages=[{
@@ -122,25 +121,33 @@ def extract_financial_data_from_image_ollama(
         
         actual_json_prompt_template = prompt_template_for_json_extraction
         if not actual_json_prompt_template:
+            # Modified default JSON extraction prompt to be more focused and efficient
             actual_json_prompt_template = """
-            Anda adalah seorang ahli akuntansi dan analis keuangan. Tugas Anda adalah mengekstrak informasi keuangan dari teks berikut dan menyajikannya dalam format JSON.
-            Teks ini berasal dari dokumen keuangan seperti neraca, laporan laba rugi, atau laporan arus kas.
+            Anda adalah sistem AI yang bertugas mengekstrak DATA KEUANGAN UTAMA dari teks yang diberikan.
+            Fokus HANYA pada item keuangan dari DAFTAR KATA KUNCI TARGET dan nilai-nilainya.
+            Output HARUS berupa JSON yang valid.
 
-            Instruksi Penting:
-            1.  Identifikasi setiap item/akun keuangan yang relevan dari daftar kata kunci yang disediakan.
-            2.  Untuk setiap item, temukan nilai numerik yang terkait untuk "current_year" dan "previous_year". Jika hanya satu tahun yang ada, isi salah satunya dan biarkan yang lain null. Jika item tidak ada, jangan masukkan.
-            3.  Normalisasi nilai numerik: Hilangkan pemisah ribuan (misalnya, '.' atau ',' yang digunakan sebagai pemisah ribuan). Koma (,) umumnya digunakan sebagai desimal di Indonesia; titik (.) juga bisa sebagai desimal. Pastikan nilai akhir adalah angka (float atau int). Angka dalam tanda kurung (123.456) berarti negatif.
-            4.  Struktur JSON output HARUS berupa dictionary di mana setiap key adalah nama item keuangan (gunakan nama dari daftar kata kunci jika memungkinkan), dan value-nya adalah dictionary dengan keys "current_year" dan "previous_year". Contoh: {{ "Nama Akun": {{ "current_year": 12345.67, "previous_year": 11000.00 }} }}
-            5.  Perhatikan adanya pengali global (misalnya, "dalam jutaan Rupiah", "in thousands", "dalam ribuan IDR"). Jika ada, semua nilai numerik yang diekstrak HARUS sudah dikalikan dengan pengali tersebut. Jika tidak ada pengali, asumsikan nilai absolut. Sebutkan pengali yang digunakan jika ada di bagian metadata output.
-            6.  Hanya kembalikan blok kode JSON yang valid. Jangan sertakan penjelasan atau teks lain di luar blok kode JSON. Mulai dengan ```json dan akhiri dengan ```.
-
-            Daftar Kata Kunci Keuangan (prioritaskan ini untuk nama item dalam JSON, dan coba cari variasinya juga dari teks):
+            DAFTAR KATA KUNCI TARGET:
             {keywords_list_str}
 
-            Teks Dokumen Keuangan (hasil OCR):
+            Teks untuk Diproses (hasil OCR, mungkin mengandung teks non-keuangan):
             {text_to_process}
 
-            Blok Kode JSON Hasil Ekstraksi:
+            Instruksi Ekstraksi JSON:
+            1.  **Fokus Utama**: Ekstrak HANYA item dari DAFTAR KATA KUNCI TARGET. Abaikan semua teks lain.
+            2.  **Nilai**: Untuk setiap item target, temukan nilai untuk 'current_year' dan 'previous_year'. Jika salah satu tidak ada, gunakan null. Jika item tidak ada dalam teks, jangan sertakan item tersebut dalam JSON.
+            3.  **Normalisasi Angka**:
+                *   Hilangkan pemisah ribuan (misalnya, '1.234.567,89' menjadi '1234567.89').
+                *   Angka dalam tanda kurung `(123)` atau `(123,45)` berarti negatif (misalnya, -123 atau -123.45).
+                *   Pastikan nilai akhir adalah numerik (float atau integer).
+            4.  **Pengali Global**: Jika teks menyebutkan pengali (misal "dalam jutaan", "in thousands", "dalam ribuan"), KALIKAN SEMUA NILAI dengan pengali tersebut. Jika ada, sebutkan pengali yang digunakan dalam metadata output jika memungkinkan, atau pastikan nilai sudah dikalikan.
+            5.  **Format JSON Output**:
+                *   Struktur: `{{ "Nama Akun Target": {{ "current_year": nilai_angka, "previous_year": nilai_angka_atau_null }} }}`.
+                *   Gunakan nama dari DAFTAR KATA KUNCI TARGET sebagai key utama.
+                *   HANYA sertakan item yang ditemukan.
+            6.  **Efisiensi**: Jangan sertakan penjelasan atau teks tambahan dalam output Anda. HANYA blok kode JSON. Mulai dengan ```json dan akhiri dengan ```.
+
+            JSON Hasil Ekstraksi (FOKUS HANYA PADA DATA KEUANGAN DARI KATA KUNCI TARGET):
             """
 
         # Membuat string daftar kata kunci untuk prompt.
