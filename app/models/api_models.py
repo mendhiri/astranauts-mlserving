@@ -17,95 +17,117 @@ class PrabuAnalysisRequest(BaseModel):
     altman_model_type_override: Optional[str] = Field(None, pattern=r"^(public_manufacturing|private_manufacturing|non_manufacturing_or_emerging_markets)$")
 
 class PrabuRatios(BaseModel):
-    # Contoh, bisa sangat detail tergantung output prabu_service
-    X1: Optional[float] = Field(None, alias="X1 (Working Capital / Total Assets)")
-    X2: Optional[float] = Field(None, alias="X2 (Retained Earnings / Total Assets)")
-    # ... tambahkan rasio lain dari Altman, Beneish, Common Ratios
-    model_type: Optional[str] = None
-    interpretation_zones: Optional[Dict[str, str]] = None
-    error: Optional[str] = None
+    """Model untuk rasio-rasio yang digunakan dalam Altman Z-Score."""
+    X1: Optional[float] = Field(None, alias="X1 (Working Capital / Total Assets)", description="Modal Kerja / Total Aset")
+    X2: Optional[float] = Field(None, alias="X2 (Retained Earnings / Total Assets)", description="Laba Ditahan / Total Aset")
+    X3: Optional[float] = Field(None, alias="X3 (EBIT / Total Assets)", description="EBIT / Total Aset")
+    X4: Optional[float] = Field(None, alias="X4 (Market Value of Equity / Total Liabilities)", description="Nilai Pasar Ekuitas / Total Liabilitas (atau Nilai Buku Ekuitas sbg proxy)")
+    X4_note: Optional[str] = Field(None, description="Catatan terkait penggunaan Nilai Pasar atau Buku untuk X4")
+    X5: Optional[float] = Field(None, alias="X5 (Sales / Total Assets)", description="Penjualan / Total Aset (tidak digunakan di semua model Altman)")
+    model_type: Optional[str] = Field(None, description="Tipe model Altman Z-Score yang digunakan")
+    interpretation_zones: Optional[Dict[str, str]] = Field(None, description="Zona interpretasi skor untuk model yang digunakan")
+    error: Optional[str] = Field(None, description="Pesan error jika perhitungan rasio gagal")
 
     class Config:
         populate_by_name = True # Mengizinkan penggunaan alias
 
 class PrabuAltmanAnalysis(BaseModel):
-    z_score: Optional[float] = None
-    ratios: Optional[Any] = None # Bisa PrabuRatios atau Dict
-    interpretation: Optional[str] = None
-    zone: Optional[str] = None
-    model_used: Optional[str] = None
-    error: Optional[str] = None
+    """Hasil analisis Altman Z-Score."""
+    z_score: Optional[float] = Field(None, description="Nilai Altman Z-Score")
+    ratios: Optional[PrabuRatios] = Field(None, description="Rincian rasio Altman yang digunakan") # Diubah dari Any ke PrabuRatios
+    interpretation: Optional[str] = Field(None, description="Interpretasi hasil skor Z")
+    zone: Optional[str] = Field(None, description="Zona risiko berdasarkan skor Z (Safe, Grey, Distress)")
+    model_used: Optional[str] = Field(None, description="Model Altman Z-Score yang diaplikasikan")
+    error: Optional[str] = Field(None, description="Pesan error jika analisis Altman gagal")
 
 class PrabuBeneishAnalysis(BaseModel):
-    m_score: Optional[float] = None
-    ratios: Optional[Dict[str, float]] = None
-    interpretation: Optional[str] = None
-    error: Optional[str] = None
+    """Hasil analisis Beneish M-Score."""
+    m_score: Optional[float] = Field(None, description="Nilai Beneish M-Score")
+    ratios: Optional[Dict[str, Optional[float]]] = Field(None, description="Rincian rasio Beneish (DSRI, GMI, dll.)") # Float bisa None jika gagal hitung
+    interpretation: Optional[str] = Field(None, description="Interpretasi hasil skor M (indikasi manipulasi)")
+    error: Optional[str] = Field(None, description="Pesan error jika analisis Beneish gagal")
 
 class PrabuCommonRatios(BaseModel):
-    debt_to_equity_ratio: Optional[float] = Field(None, alias="Debt-to-Equity Ratio")
-    current_ratio: Optional[float] = Field(None, alias="Current Ratio")
-    
-    error: Optional[str] = None
+    """Kumpulan rasio keuangan umum."""
+    debt_to_equity_ratio: Optional[float] = Field(None, alias="Debt-to-Equity Ratio", description="Total Liabilitas / Total Ekuitas")
+    current_ratio: Optional[float] = Field(None, alias="Current Ratio", description="Aset Lancar / Liabilitas Jangka Pendek")
+    interest_coverage_ratio: Optional[float] = Field(None, alias="Interest Coverage Ratio", description="EBIT / Beban Bunga")
+    net_profit_margin: Optional[float] = Field(None, alias="Net Profit Margin", description="Laba Bersih / Pendapatan Bersih")
+    gross_profit_margin: Optional[float] = Field(None, alias="Gross Profit Margin", description="Laba Bruto / Pendapatan Bersih")
+    debt_ratio: Optional[float] = Field(None, alias="Debt Ratio", description="Total Liabilitas / Total Aset")
+    roe: Optional[float] = Field(None, alias="ROE (Return on Equity)", description="Laba Bersih / Total Ekuitas")
+    roa_ebit: Optional[float] = Field(None, alias="ROA (Return on Assets - EBIT based)", description="EBIT / Total Aset")
+    sales_growth: Optional[float] = Field(None, alias="Sales Growth", description="Pertumbuhan Pendapatan Bersih (t vs t-1)")
+    error: Optional[str] = Field(None, description="Pesan error jika perhitungan rasio umum gagal")
     
     class Config:
         populate_by_name = True
 
 class PrabuCreditRiskPrediction(BaseModel):
-    credit_risk_score: Optional[float] = None
-    risk_category: Optional[str] = None
-    underlying_ratios: Optional[Dict[str, Optional[float]]] = None # Dibuat lebih eksplisit
-    altman_z_score_used: Optional[float] = None
-    beneish_m_score_used: Optional[float] = None
-    error: Optional[str] = None
+    """Hasil prediksi risiko kredit."""
+    credit_risk_score: Optional[float] = Field(None, description="Skor risiko kredit (0-100, lebih tinggi = risiko lebih rendah)")
+    risk_category: Optional[str] = Field(None, description="Kategori risiko (Low, Medium, High)")
+    underlying_ratios: Optional[Dict[str, Optional[float]]] = Field(None, description="Rasio-rasio yang digunakan dalam model prediksi risiko")
+    altman_z_score_used: Optional[float] = Field(None, description="Nilai Altman Z-Score yang digunakan dalam prediksi")
+    beneish_m_score_used: Optional[float] = Field(None, description="Nilai Beneish M-Score yang digunakan dalam prediksi")
+    error: Optional[str] = Field(None, description="Pesan error jika prediksi risiko kredit gagal")
 
 
 class PrabuAnalysisResponse(BaseModel):
+    """Respons lengkap dari analisis Prabu."""
     altman_z_score_analysis: PrabuAltmanAnalysis
     beneish_m_score_analysis: PrabuBeneishAnalysis
-    common_financial_ratios: Any # Bisa PrabuCommonRatios atau Dict jika ada error
+    common_financial_ratios: PrabuCommonRatios # Diubah dari Any ke PrabuCommonRatios
     credit_risk_prediction: PrabuCreditRiskPrediction
-    error: Optional[str] = None # Error global dari analisis Prabu
+    error: Optional[str] = Field(None, description="Pesan error global dari keseluruhan analisis Prabu")
 
 # Untuk Sarana, inputnya adalah UploadFile, jadi tidak perlu model Pydantic khusus untuk input file.
 # Outputnya adalah dictionary, bisa kita definisikan jika strukturnya tetap.
 class SaranaKeywordExtraction(BaseModel):
-    t: Optional[Any] = None
-    t_minus_1: Optional[Any] = None
+    """Data ekstraksi kata kunci untuk satu periode."""
+    t: Optional[float] = Field(None, description="Nilai untuk periode t (tahun berjalan)")
+    t_minus_1: Optional[float] = Field(None, description="Nilai untuk periode t-1 (tahun sebelumnya)")
 
 class SaranaParseDocumentResponse(BaseModel):
+    """Respons dari layanan parsing dokumen Sarana."""
     nama_file: str
-    info_parsing: str
-    error_parsing: Optional[str] = None
-    teks_ekstrak_mentah: Optional[str] = None
-    tahun_pelaporan_terdeteksi: Optional[str] = None
-    pengali_global_terdeteksi: Optional[float] = None
-    # hasil_ekstraksi_kata_kunci bisa Dict[str, SaranaKeywordExtraction] atau Dict[str, Dict]
-    hasil_ekstraksi_kata_kunci: Optional[Dict[str, SaranaKeywordExtraction]] = None
-    # Untuk output_format='structured_json'
-    hasil_ekstraksi_terstruktur: Optional[Dict[str, Any]] = None
+    info_parsing: str = Field(description="Informasi mengenai proses parsing yang dilakukan")
+    error_parsing: Optional[str] = Field(None, description="Pesan error jika terjadi kegagalan parsing")
+    teks_ekstrak_mentah: Optional[str] = Field(None, description="Teks mentah hasil ekstraksi (jika output_format='text')")
+    tahun_pelaporan_terdeteksi: Optional[str] = Field(None, description="Tahun pelaporan yang terdeteksi dari dokumen")
+    pengali_global_terdeteksi: Optional[float] = Field(None, description="Pengali global (misal, ribuan, jutaan) yang terdeteksi")
+    hasil_ekstraksi_kata_kunci: Optional[Dict[str, SaranaKeywordExtraction]] = Field(None, description="Hasil ekstraksi kata kunci keuangan dari teks (jika output_format='text')")
+    hasil_ekstraksi_terstruktur: Optional[Dict[str, Any]] = Field(None, description="Hasil ekstraksi terstruktur dalam format JSON (jika output_format='structured_json')")
 
 
 # Untuk Setia
 class SetiaRiskIntelligenceRequest(BaseModel):
-    applicant_name: str = Field(..., example="PT Contoh Tbk")
-    industry_main: Optional[str] = Field(None, example="Keuangan")
-    industry_sub: Optional[str] = Field(None, example="Perbankan (BUKU IV/III)")
-    use_gcs_for_risk_data: bool = False
-    gcs_bucket_name_override: Optional[str] = None
+    """Request untuk analisis intelijen risiko Setia."""
+    applicant_name: str = Field(..., example="PT Contoh Tbk", description="Nama entitas/aplikan yang akan dianalisis")
+    industry_main: Optional[str] = Field(None, example="Keuangan", description="Sektor industri utama")
+    industry_sub: Optional[str] = Field(None, example="Perbankan (BUKU IV/III)", description="Sub-sektor industri")
+    use_gcs_for_risk_data: bool = Field(False, description="Gunakan GCS untuk memuat data risiko industri (jika True)")
+    gcs_bucket_name_override: Optional[str] = Field(None, description="Nama bucket GCS kustom untuk data risiko (override default jika ada)")
 
 class SetiaSupportingSource(BaseModel):
-    title: Optional[str] = None
-    url: Optional[str] = None
+    """Sumber pendukung untuk analisis Setia."""
+    title: Optional[str] = Field(None, description="Judul sumber berita/artikel")
+    url: Optional[str] = Field(None, description="URL sumber berita/artikel")
 
 class SetiaRiskIntelligenceResponse(BaseModel):
-    groundedSummary: Optional[str] = None
-    overallSentiment: Optional[str] = None
-    keyIssues: Optional[List[str]] = []
-    supportingSources: Optional[List[SetiaSupportingSource]] = []
-    industrySectorOutlook: Optional[str] = None
-    lastUpdateTimestamp: datetime.datetime
-    error: Optional[str] = None
+    """Respons dari analisis intelijen risiko Setia."""
+    groundedSummary: Optional[str] = Field(None, description="Ringkasan analisis berbasis berita terkini (grounded AI)")
+    overallSentiment: Optional[str] = Field(None, description="Sentimen keseluruhan dari analisis berita")
+    keyIssues: Optional[List[str]] = Field([], description="Daftar isu kunci atau risiko yang teridentifikasi dari berita")
+    supportingSources: Optional[List[SetiaSupportingSource]] = Field([], description="Daftar sumber pendukung (berita/artikel)")
+    industrySectorOutlook: Optional[str] = Field(None, description="Outlook risiko untuk sektor industri terkait")
+    lastUpdateTimestamp: datetime.datetime = Field(description="Timestamp kapan analisis terakhir dilakukan (UTC)")
+    error: Optional[str] = Field(None, description="Pesan error jika analisis Setia gagal")
 
 # Tambahkan __all__ untuk kontrol impor jika diperlukan
-__all__ = ["FinancialDataInput", "PrabuAnalysisRequest", "PrabuAnalysisResponse", "SaranaParseDocumentResponse", "SetiaRiskIntelligenceRequest", "SetiaRiskIntelligenceResponse"]
+__all__ = [
+    "FinancialDataInput", "PrabuAnalysisRequest", "PrabuAnalysisResponse", 
+    "PrabuRatios", "PrabuAltmanAnalysis", "PrabuBeneishAnalysis", "PrabuCommonRatios", "PrabuCreditRiskPrediction",
+    "SaranaKeywordExtraction", "SaranaParseDocumentResponse", 
+    "SetiaRiskIntelligenceRequest", "SetiaSupportingSource", "SetiaRiskIntelligenceResponse"
+]
