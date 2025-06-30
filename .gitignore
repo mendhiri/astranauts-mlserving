@@ -169,3 +169,15 @@ poetry.toml
 
 # LSP config files
 pyrightconfig.json
+
+# Project-specific ignores
+.DS_Store
+.cache_parsing_dokumen/
+.cache_parsing_dokumen_sarana/
+temp_sarana_uploads/
+Output/
+
+# Jika ada file .env lain yang digunakan secara lokal, tambahkan juga:
+.env
+.env.local
+.env.*.local
