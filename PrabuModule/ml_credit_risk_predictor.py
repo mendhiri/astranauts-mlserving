@@ -3,158 +3,163 @@ import joblib
 import pandas as pd
 import numpy as np
 from sklearn.exceptions import NotFittedError
+from catboost import CatBoostClassifier # Import CatBoost
+# from sklearn.preprocessing import LabelEncoder # Not directly used here if trainer handles it
 
 # Path ke model dan preprocessor yang sudah dilatih
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, 'trained_models', 'incremental_risk_model.joblib')
-PREPROCESSOR_PATH = os.path.join(BASE_DIR, 'trained_models', 'preprocessor.joblib')
+MODEL_PATH = os.path.join(BASE_DIR, 'trained_models', 'incremental_risk_model.cbm') # CatBoost model path
+PREPROCESSOR_PATH = os.path.join(BASE_DIR, 'trained_models', 'preprocessor.joblib') # Numeric preprocessor
+LABEL_ENCODER_PATH = os.path.join(BASE_DIR, 'trained_models', 'label_encoder.joblib')
 
 MODEL = None
-PREPROCESSOR = None
-ALL_NUMERIC_FEATURES_FROM_TRAINER = [] 
-CATEGORICAL_FEATURES_FROM_TRAINER = [] 
-EXPECTED_COLS_FOR_TRANSFORM = []
+NUMERIC_PREPROCESSOR = None
+LABEL_ENCODER = None
+
+# These will be loaded from incremental_model_trainer constants for consistency
+try:
+    from .incremental_model_trainer import ALL_NUMERIC_FEATURES, CATEGORICAL_FEATURES
+except ImportError: # Fallback for standalone execution or testing
+    print("Warning: Could not import feature lists from incremental_model_trainer. Using placeholders.")
+    ALL_NUMERIC_FEATURES = [] # Placeholder
+    CATEGORICAL_FEATURES = ['Sektor'] # Placeholder
+
+# Define the mapping from risk category to score
+RISK_CATEGORY_TO_SCORE_MAP = {
+    "Low": 20,
+    "Medium": 50,
+    "High": 80,
+    # Default score for unknown or None categories
+    None: np.nan # Or some other default like 0 or 50
+}
+
 
 def _load_resources():
-    global MODEL, PREPROCESSOR, ALL_NUMERIC_FEATURES_FROM_TRAINER, CATEGORICAL_FEATURES_FROM_TRAINER, EXPECTED_COLS_FOR_TRANSFORM
+    global MODEL, NUMERIC_PREPROCESSOR, LABEL_ENCODER
     
     if os.path.exists(MODEL_PATH):
-        MODEL = joblib.load(MODEL_PATH)
-        print(f"Model ML dimuat dari {MODEL_PATH}")
+        MODEL = CatBoostClassifier()
+        MODEL.load_model(MODEL_PATH)
+        print(f"Model CatBoost dimuat dari {MODEL_PATH}")
     else:
-        print(f"PERINGATAN: File model tidak ditemukan di {MODEL_PATH}. Prediksi ML tidak akan berfungsi.")
+        print(f"PERINGATAN: File model CatBoost tidak ditemukan di {MODEL_PATH}. Prediksi ML tidak akan berfungsi.")
         MODEL = None
 
     if os.path.exists(PREPROCESSOR_PATH):
-        PREPROCESSOR = joblib.load(PREPROCESSOR_PATH)
-        print(f"Preprocessor dimuat dari {PREPROCESSOR_PATH}")
-        
-        try:
-            num_features_idx = -1
-            cat_features_idx = -1
-
-            for i, transformer_tuple in enumerate(PREPROCESSOR.transformers_):
-                name, _, _ = transformer_tuple
-                if name == 'num':
-                    num_features_idx = i
-                elif name == 'cat':
-                    cat_features_idx = i
-            
-            if num_features_idx != -1:
-                ALL_NUMERIC_FEATURES_FROM_TRAINER = PREPROCESSOR.transformers_[num_features_idx][2]
-            else:
-                 print("Transformer 'num' tidak ditemukan di preprocessor.")
-                 ALL_NUMERIC_FEATURES_FROM_TRAINER = []
-
-            if cat_features_idx != -1:
-                CATEGORICAL_FEATURES_FROM_TRAINER = PREPROCESSOR.transformers_[cat_features_idx][2]
-            else:
-                print("Transformer 'cat' tidak ditemukan di preprocessor.")
-                CATEGORICAL_FEATURES_FROM_TRAINER = []
-                
-            EXPECTED_COLS_FOR_TRANSFORM = ALL_NUMERIC_FEATURES_FROM_TRAINER + CATEGORICAL_FEATURES_FROM_TRAINER
-            
-            print(f"Preprocessor mengharapkan fitur numerik: {ALL_NUMERIC_FEATURES_FROM_TRAINER}")
-            print(f"Preprocessor mengharapkan fitur kategorikal: {CATEGORICAL_FEATURES_FROM_TRAINER}")
-        except Exception as e:
-            print(f"Gagal mengintrospeksi fitur dari preprocessor: {e}. Daftar fitur mungkin tidak akurat.")
-            try:
-                from .incremental_model_trainer import ALL_NUMERIC_FEATURES, CATEGORICAL_FEATURES
-                ALL_NUMERIC_FEATURES_FROM_TRAINER = ALL_NUMERIC_FEATURES
-                CATEGORICAL_FEATURES_FROM_TRAINER = CATEGORICAL_FEATURES
-                EXPECTED_COLS_FOR_TRANSFORM = ALL_NUMERIC_FEATURES + CATEGORICAL_FEATURES
-            except ImportError:
-                 print("Gagal impor fallback konfigurasi fitur dari incremental_model_trainer.")
+        NUMERIC_PREPROCESSOR = joblib.load(PREPROCESSOR_PATH)
+        print(f"Preprocessor numerik dimuat dari {PREPROCESSOR_PATH}")
     else:
-        print(f"PERINGATAN: File preprocessor tidak ditemukan di {PREPROCESSOR_PATH}. Prediksi ML tidak akan berfungsi.")
-        PREPROCESSOR = None
-        try:
-            from .incremental_model_trainer import ALL_NUMERIC_FEATURES, CATEGORICAL_FEATURES
-            ALL_NUMERIC_FEATURES_FROM_TRAINER = ALL_NUMERIC_FEATURES
-            CATEGORICAL_FEATURES_FROM_TRAINER = CATEGORICAL_FEATURES
-            EXPECTED_COLS_FOR_TRANSFORM = ALL_NUMERIC_FEATURES + CATEGORICAL_FEATURES
-        except ImportError:
-             print("Gagal impor fallback konfigurasi fitur dari incremental_model_trainer.")
+        print(f"PERINGATAN: File preprocessor numerik tidak ditemukan di {PREPROCESSOR_PATH}. Prediksi ML mungkin tidak akurat.")
+        NUMERIC_PREPROCESSOR = None
+    
+    if os.path.exists(LABEL_ENCODER_PATH):
+        LABEL_ENCODER = joblib.load(LABEL_ENCODER_PATH)
+        print(f"LabelEncoder dimuat dari {LABEL_ENCODER_PATH}")
+    else:
+        print(f"PERINGATAN: File LabelEncoder tidak ditemukan di {LABEL_ENCODER_PATH}. Prediksi kategori mungkin gagal.")
+        LABEL_ENCODER = None
 
 _load_resources()
 
 def predict_credit_risk_ml(financial_data_dict: dict, sector: str) -> dict:
-    global MODEL, PREPROCESSOR, EXPECTED_COLS_FOR_TRANSFORM
+    global MODEL, NUMERIC_PREPROCESSOR, LABEL_ENCODER, ALL_NUMERIC_FEATURES, CATEGORICAL_FEATURES
 
-    if MODEL is None or PREPROCESSOR is None:
-        return {
-            "risk_category": None,
-            "probabilities": None,
-            "error": "Model ML atau preprocessor tidak dimuat. Prediksi tidak dapat dilakukan."
-        }
+    default_return = {
+        "risk_category": None,
+        "risk_score": np.nan,
+        "probabilities": None,
+        "error": None
+    }
+
+    if MODEL is None or NUMERIC_PREPROCESSOR is None or LABEL_ENCODER is None:
+        default_return["error"] = "Model ML, Preprocessor, atau LabelEncoder tidak dimuat. Prediksi tidak dapat dilakukan."
+        return default_return
 
     input_df = pd.DataFrame([financial_data_dict])
-    input_df['Sektor'] = sector 
-
-    # Create a DataFrame with the expected columns, filled with NaN initially
-    # Then populate with values from input_df
-    # This ensures correct column order and presence for the preprocessor
-    df_for_transform = pd.DataFrame(columns=EXPECTED_COLS_FOR_TRANSFORM)
-    for col in EXPECTED_COLS_FOR_TRANSFORM:
-        if col in input_df.columns:
-            # Use .loc to assign to the single row of df_for_transform
-            df_for_transform.loc[0, col] = input_df.loc[0, col]
-        elif col in ALL_NUMERIC_FEATURES_FROM_TRAINER : 
-            df_for_transform.loc[0, col] = np.nan
-        elif col in CATEGORICAL_FEATURES_FROM_TRAINER:
-             # For 'Sektor', it's already added. If other categoricals were expected but missing:
-            df_for_transform.loc[0, col] = None 
     
-    # If EXPECTED_COLS_FOR_TRANSFORM was empty (e.g. preprocessor load failed badly)
-    if not EXPECTED_COLS_FOR_TRANSFORM and not input_df.empty:
-        # Fallback: try to use whatever columns are in input_df that might match general/categorical lists
-        # This is risky and might not align with what the preprocessor was trained on.
-        print("Peringatan: EXPECTED_COLS_FOR_TRANSFORM kosong. Mencoba menggunakan kolom dari input.")
-        cols_to_use = [c for c in input_df.columns if c in ALL_NUMERIC_FEATURES_FROM_TRAINER or c in CATEGORICAL_FEATURES_FROM_TRAINER]
-        if not cols_to_use:
-             return {"risk_category": None, "probabilities": None, "error": "Tidak ada fitur yang cocok untuk pra-pemrosesan."}
-        df_for_transform = input_df[cols_to_use]
+    # --- Data Preparation for CatBoost ---
+    # 1. Handle Categorical Features (ensure 'Sektor' is string)
+    input_df['Sektor'] = str(sector) # Ensure sector is string
+    for col in CATEGORICAL_FEATURES: # Ensure all expected categoricals are strings
+        if col in input_df.columns:
+            input_df[col] = input_df[col].astype(str)
+        else: # If a categorical feature is missing (e.g. Sektor was not in financial_data_dict)
+            if col == 'Sektor': # Should have been set above
+                 pass
+            else: # Other potential categorical features
+                input_df[col] = 'Unknown' # Or np.nan, CatBoost handles string 'nan' or actual np.nan
 
+    # 2. Handle Numeric Features (ensure all expected are present, fill with NaN for CatBoost)
+    # These are the features the numeric_preprocessor was trained on.
+    try:
+        # Get the list of numeric features the preprocessor was actually trained on
+        expected_numeric_cols_for_transform = NUMERIC_PREPROCESSOR.transformers_[0][2]
+    except Exception: # Fallback if introspection fails (e.g. preprocessor is not ColumnTransformer)
+        print("Warning: Could not reliably determine preprocessor's expected numeric features from its structure. Using ALL_NUMERIC_FEATURES.")
+        expected_numeric_cols_for_transform = [f for f in ALL_NUMERIC_FEATURES if f in input_df.columns]
+        if not expected_numeric_cols_for_transform: # If no common features, take all from input_df
+            expected_numeric_cols_for_transform = [f for f in input_df.columns if f not in CATEGORICAL_FEATURES]
+
+
+    # Ensure all expected numeric columns are in input_df, fill missing with np.nan
+    for col in expected_numeric_cols_for_transform:
+        if col not in input_df.columns:
+            input_df[col] = np.nan
+    
+    # Select only the numeric columns expected by the preprocessor for transformation
+    input_df_numeric_part = input_df[expected_numeric_cols_for_transform]
 
     try:
-        processed_input = PREPROCESSOR.transform(df_for_transform)
+        processed_numeric_part = NUMERIC_PREPROCESSOR.transform(input_df_numeric_part)
+        df_processed_numeric = pd.DataFrame(processed_numeric_part, columns=expected_numeric_cols_for_transform, index=input_df.index)
     except NotFittedError:
-        return {"risk_category": None, "probabilities": None, "error": "Preprocessor belum dilatih."}
+        default_return["error"] = "Preprocessor numerik belum dilatih."
+        return default_return
     except ValueError as ve:
-        return {"risk_category": None, "probabilities": None, "error": f"ValueError saat pra-pemrosesan input: {ve}"}
-    except KeyError as ke:
-        print(f"KeyError saat pra-pemrosesan: {ke}. Ini mungkin karena df_for_transform tidak memiliki semua kolom yang diharapkan oleh PREPROCESSOR.transform, atau urutannya salah.")
-        print(f"Kolom di df_for_transform: {df_for_transform.columns.tolist()}")
-        print(f"Kolom yang diharapkan (numerik): {ALL_NUMERIC_FEATURES_FROM_TRAINER}")
-        print(f"Kolom yang diharapkan (kategorikal): {CATEGORICAL_FEATURES_FROM_TRAINER}")
-        return {"risk_category": None, "probabilities": None, "error": f"KeyError saat pra-pemrosesan input: {ke}. Periksa daftar fitur yang diharapkan."}
+        default_return["error"] = f"ValueError saat pra-pemrosesan input numerik: {ve}"
+        return default_return
     except Exception as e:
-        return {"risk_category": None, "probabilities": None, "error": f"Error tidak diketahui saat pra-pemrosesan: {e}"}
+        default_return["error"] = f"Error tidak diketahui saat pra-pemrosesan numerik: {e}"
+        return default_return
+
+    # 3. Combine processed numeric features with original categorical features for CatBoost
+    # Ensure only expected categorical features are selected
+    categorical_features_for_model = [col for col in CATEGORICAL_FEATURES if col in input_df.columns]
+    df_final_for_model = pd.concat([df_processed_numeric, input_df[categorical_features_for_model].reset_index(drop=True)], axis=1)
+    
+    # CatBoost needs to know which features are categorical by their names or indices
+    # These indices are relative to the columns in df_final_for_model
+    cat_feature_indices_pred = [df_final_for_model.columns.get_loc(col) for col in categorical_features_for_model if col in df_final_for_model.columns]
 
     try:
-        prediction = MODEL.predict(processed_input)
-        probabilities = MODEL.predict_proba(processed_input)
-        model_classes = MODEL.classes_
-        proba_dict = dict(zip(model_classes, probabilities[0]))
+        prediction_encoded = MODEL.predict(df_final_for_model, cat_features=cat_feature_indices_pred)
+        probabilities_array = MODEL.predict_proba(df_final_for_model, cat_features=cat_feature_indices_pred)
+        
+        # Prediction_encoded is likely [[index]], flatten and convert to int for label_encoder
+        predicted_category_label = LABEL_ENCODER.inverse_transform(prediction_encoded.astype(int).flatten())[0]
+        
+        proba_dict = dict(zip(LABEL_ENCODER.classes_, probabilities_array[0]))
+        
+        # Map predicted category to numeric score
+        predicted_score = RISK_CATEGORY_TO_SCORE_MAP.get(predicted_category_label, np.nan) # Default to NaN if category not in map
         
         return {
-            "risk_category": prediction[0],
+            "risk_category": predicted_category_label,
+            "risk_score": predicted_score,
             "probabilities": proba_dict,
             "error": None
         }
     except NotFittedError:
-         return {"risk_category": None, "probabilities": None, "error": "Model ML belum dilatih."}
+         default_return["error"] = "Model CatBoost belum dilatih."
+         return default_return
     except Exception as e:
-        return {
-            "risk_category": None,
-            "probabilities": None,
-            "error": f"Error saat melakukan prediksi ML: {e}"
-        }
+        default_return["error"] = f"Error saat melakukan prediksi CatBoost: {e}"
+        return default_return
 
 if __name__ == '__main__':
-    print("Contoh Prediksi menggunakan ML Credit Risk Predictor:")
-    if MODEL is None or PREPROCESSOR is None:
-        print("Model atau Preprocessor tidak dimuat. Jalankan incremental_model_trainer.py terlebih dahulu untuk melatih dan menyimpan model.")
+    print("Contoh Prediksi menggunakan ML Credit Risk Predictor (CatBoost):")
+    if MODEL is None or NUMERIC_PREPROCESSOR is None or LABEL_ENCODER is None:
+        print("Model, Preprocessor Numerik, atau LabelEncoder tidak dimuat. Pastikan incremental_model_trainer.py telah dijalankan.")
     else:
         sample_data_pertambangan = {
             'CurrentRatio': 1.5, 'DebtToEquityRatio': 0.8, 'NetProfitMargin': 0.1,

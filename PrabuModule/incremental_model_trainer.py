@@ -4,18 +4,21 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import SGDClassifier
+from catboost import CatBoostClassifier
 from sklearn.metrics import classification_report
 from sklearn.exceptions import NotFittedError
 import joblib
 import os
 import glob
 from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import LabelEncoder
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), 'trained_models')
-MODEL_PATH = os.path.join(MODEL_DIR, 'incremental_risk_model.joblib')
+MODEL_PATH = os.path.join(MODEL_DIR, 'incremental_risk_model.cbm') # Changed extension for CatBoost native format
 PREPROCESSOR_PATH = os.path.join(MODEL_DIR, 'preprocessor.joblib')
 CLASSES_PATH = os.path.join(MODEL_DIR, 'classes.npy')
+LABEL_ENCODER_PATH = os.path.join(MODEL_DIR, 'label_encoder.joblib')
+
 
 # Pastikan direktori model ada
 os.makedirs(MODEL_DIR, exist_ok=True)
@@ -53,11 +56,16 @@ SECTOR_SPECIFIC_FEATURES_MAP = {
 
 ALL_SECTOR_SPECIFIC_NUMERIC_FEATURES = list(set(f for features in SECTOR_SPECIFIC_FEATURES_MAP.values() for f in features))
 ALL_NUMERIC_FEATURES = GENERAL_FEATURES + ALL_SECTOR_SPECIFIC_NUMERIC_FEATURES
-CATEGORICAL_FEATURES = ['Sektor']
+CATEGORICAL_FEATURES = ['Sektor'] # CatBoost will handle this
 TARGET_COLUMN = 'RiskCategory'
 
 def load_data_from_csv(file_path):
-    return pd.read_csv(file_path)
+    df = pd.read_csv(file_path)
+    # Ensure categorical features are treated as strings, CatBoost handles NaN in them
+    for col in CATEGORICAL_FEATURES:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
+    return df
 
 def load_all_datasets(dataset_folder='PrabuModule/datasets'):
     all_files = glob.glob(os.path.join(dataset_folder, "*.csv"))
@@ -68,7 +76,8 @@ def load_all_datasets(dataset_folder='PrabuModule/datasets'):
     df_list = []
     for f in all_files:
         try:
-            df_list.append(pd.read_csv(f))
+            df_temp = load_data_from_csv(f) # Use the modified load_data_from_csv
+            df_list.append(df_temp)
         except Exception as e:
             print(f"Gagal membaca file {f}: {e}")
     
@@ -76,260 +85,295 @@ def load_all_datasets(dataset_folder='PrabuModule/datasets'):
         print("Tidak ada data yang berhasil dimuat dari file CSV.")
         return pd.DataFrame()
         
-    return pd.concat(df_list, ignore_index=True)
+    combined_df = pd.concat(df_list, ignore_index=True)
+    # Ensure all numeric features are present, fill with NaN if not (CatBoost handles NaN)
+    for col in ALL_NUMERIC_FEATURES:
+        if col not in combined_df.columns:
+            combined_df[col] = np.nan
+    return combined_df
 
 def get_preprocessor(df_for_fitting_preprocessor):
+    # This preprocessor will now only handle numeric features: impute and scale.
+    # Categorical features will be handled by CatBoost directly.
     if os.path.exists(PREPROCESSOR_PATH):
-        print("Memuat preprocessor yang sudah ada...")
+        print("Memuat preprocessor numerik yang sudah ada...")
         return joblib.load(PREPROCESSOR_PATH)
 
-    print("Membuat preprocessor baru...")
+    print("Membuat preprocessor numerik baru...")
+    # CatBoost will handle NaNs internally. We only scale numeric features.
     numeric_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='constant', fill_value=0)),
+        # ('imputer', SimpleImputer(strategy='mean')), # Removed: CatBoost will handle NaN
         ('scaler', StandardScaler())
-    ])
-    categorical_transformer = Pipeline(steps=[
-        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
     ])
 
     # Filter ALL_NUMERIC_FEATURES to only include those present in df_for_fitting_preprocessor
-    # This is crucial if df_for_fitting_preprocessor is a subset and doesn't have all possible sector features yet
     existing_numeric_features_in_df = [col for col in ALL_NUMERIC_FEATURES if col in df_for_fitting_preprocessor.columns]
+    
+    if not existing_numeric_features_in_df:
+        print("Tidak ada fitur numerik yang ditemukan dalam data untuk melatih preprocessor.")
+        # Return a dummy preprocessor or handle this case as an error
+        return None 
 
+    # We only define transformers for numeric features. Categorical features are passed to CatBoost.
+    # `remainder='passthrough'` would keep other columns, but we'll manage feature set manually for CatBoost.
     preprocessor = ColumnTransformer(
         transformers=[
-            ('num', numeric_transformer, existing_numeric_features_in_df),
-            ('cat', categorical_transformer, CATEGORICAL_FEATURES)
+            ('num', numeric_transformer, existing_numeric_features_in_df)
         ],
-        remainder='drop' 
+        remainder='drop' # Drop any other columns not specified (e.g. UniqueID, etc.)
     )
     
-    print(f"Melatih preprocessor pada kolom: {existing_numeric_features_in_df + CATEGORICAL_FEATURES}")
-    # Fit preprocessor only on the columns that exist in the provided dataframe.
-    # OneHotEncoder will learn categories from 'Sektor'. StandardScaler from existing numeric features.
-    preprocessor.fit(df_for_fitting_preprocessor[existing_numeric_features_in_df + CATEGORICAL_FEATURES])
+    print(f"Melatih preprocessor numerik pada kolom: {existing_numeric_features_in_df}")
+    preprocessor.fit(df_for_fitting_preprocessor[existing_numeric_features_in_df])
     
     joblib.dump(preprocessor, PREPROCESSOR_PATH)
-    print(f"Preprocessor baru disimpan di {PREPROCESSOR_PATH}")
+    print(f"Preprocessor numerik baru disimpan di {PREPROCESSOR_PATH}")
     return preprocessor
 
-def train_initial_model(df_initial_data, force_retrain_preprocessor=False):
+def get_label_encoder(y_series):
+    if os.path.exists(LABEL_ENCODER_PATH):
+        print("Memuat LabelEncoder yang sudah ada...")
+        le = joblib.load(LABEL_ENCODER_PATH)
+    else:
+        print("Membuat LabelEncoder baru...")
+        le = LabelEncoder()
+        le.fit(y_series)
+        joblib.dump(le, LABEL_ENCODER_PATH)
+        np.save(CLASSES_PATH, le.classes_) # Save string class names
+        print(f"LabelEncoder baru disimpan di {LABEL_ENCODER_PATH}")
+        print(f"Kelas target (string) disimpan: {le.classes_}")
+    return le
+
+def train_initial_model(df_initial_data, force_retrain_preprocessor=False, force_retrain_labelencoder=False):
     if df_initial_data.empty:
         print("Data awal kosong, tidak bisa melatih model.")
-        return None, None
+        return None, None, None
 
-    X = df_initial_data.copy()
-    y = X.pop(TARGET_COLUMN)
+    X = df_initial_data.drop(columns=[TARGET_COLUMN], errors='ignore')
+    y_raw = df_initial_data[TARGET_COLUMN]
     
     if force_retrain_preprocessor and os.path.exists(PREPROCESSOR_PATH):
         os.remove(PREPROCESSOR_PATH)
-        print("Preprocessor lama dihapus untuk pelatihan ulang.")
-        
-    preprocessor = get_preprocessor(df_initial_data) 
+        print("Preprocessor numerik lama dihapus untuk pelatihan ulang.")
     
-    # Use the actual features list the preprocessor was trained on
-    # This can be derived from the preprocessor object itself for consistency
-    # For ColumnTransformer, feature_names_in_ might be useful or inspecting transformers_
-    processed_feature_names = []
-    for name, trans, columns in preprocessor.transformers_:
-        if hasattr(trans, 'get_feature_names_out'):
-            if name == 'cat': # OneHotEncoder
-                 # Need to pass original categorical column names to get_feature_names_out
-                processed_feature_names.extend(trans.get_feature_names_out(CATEGORICAL_FEATURES))
-            else: # StandardScaler (after imputer)
-                processed_feature_names.extend(trans.get_feature_names_out(columns)) # columns here are existing_numeric_features_in_df
-        else: # If no get_feature_names_out (e.g. 'drop' or older sklearn)
-            processed_feature_names.extend(columns)
+    if force_retrain_labelencoder:
+        if os.path.exists(LABEL_ENCODER_PATH): os.remove(LABEL_ENCODER_PATH)
+        if os.path.exists(CLASSES_PATH): os.remove(CLASSES_PATH)
+        print("LabelEncoder dan file kelas lama dihapus untuk pelatihan ulang.")
 
+    label_encoder = get_label_encoder(y_raw)
+    y = label_encoder.transform(y_raw) # y is now numerically encoded
+    
+    # Preprocessor for numeric features
+    numeric_preprocessor = get_preprocessor(X)
+    
+    # Identify numeric and categorical features for CatBoost
+    # Numeric features are those handled by the preprocessor
+    numeric_features_for_model = [col for col in ALL_NUMERIC_FEATURES if col in X.columns]
+    # Categorical features are specified by name
+    categorical_features_for_model = [col for col in CATEGORICAL_FEATURES if col in X.columns]
 
-    # Transform using only the features the preprocessor expects
-    # The preprocessor was fitted on existing_numeric_features_in_df + CATEGORICAL_FEATURES
-    # So, X must provide these columns.
-    training_features = [col for col in ALL_NUMERIC_FEATURES if col in X.columns] + CATEGORICAL_FEATURES
-    X_processed = preprocessor.transform(X[training_features])
+    # Prepare data for CatBoost: Apply numeric preprocessing, keep categorical as is (CatBoost handles them)
+    X_processed_numeric = pd.DataFrame(numeric_preprocessor.transform(X[numeric_features_for_model]), columns=numeric_features_for_model, index=X.index)
+    X_final_for_model = pd.concat([X_processed_numeric, X[categorical_features_for_model].reset_index(drop=True)], axis=1)
     
-    classes = np.unique(y)
-    np.save(CLASSES_PATH, classes)
-    print(f"Kelas target disimpan: {classes}")
+    # CatBoost needs to know which features are categorical by their names or indices in X_final_for_model
+    cat_feature_indices = [X_final_for_model.columns.get_loc(col) for col in categorical_features_for_model]
 
-    model = SGDClassifier(loss='log_loss', random_state=42, class_weight='balanced', warm_start=True)
+    model = CatBoostClassifier(
+        iterations=200,  # example value
+        learning_rate=0.1, # example value
+        depth=6,           # example value
+        loss_function='MultiClass',
+        eval_metric='MultiClass',
+        random_seed=42,
+        logging_level='Silent',
+        # class_weights= # Can be set if classes are imbalanced, e.g. compute from y_raw
+    )
     
-    print("Melatih model awal...")
-    model.fit(X_processed, y) 
+    print("Melatih model awal CatBoost...")
+    model.fit(
+        X_final_for_model, y,
+        cat_features=cat_feature_indices,
+        # verbose=10 # To see training progress
+    )
     
-    joblib.dump(model, MODEL_PATH)
-    print(f"Model awal disimpan di {MODEL_PATH}")
+    model.save_model(MODEL_PATH, format="cbm") # Save in CatBoost binary format
+    print(f"Model awal CatBoost disimpan di {MODEL_PATH}")
     
-    y_pred = model.predict(X_processed)
+    y_pred_encoded = model.predict(X_final_for_model)
+    y_pred_labels = label_encoder.inverse_transform(y_pred_encoded.flatten().astype(int)) # Ensure 1D for inverse_transform
+
     print("Laporan Klasifikasi pada Data Pelatihan Awal:")
-    print(classification_report(y, y_pred, labels=classes, zero_division=0)) # ensure all classes are in report
+    print(classification_report(y_raw, y_pred_labels, labels=label_encoder.classes_, zero_division=0))
     
-    return model, preprocessor
+    return model, numeric_preprocessor, label_encoder
 
-def update_model_incrementally(df_new_data, model=None, preprocessor=None):
+
+def update_model_incrementally(df_new_data, existing_model_path=None, preprocessor=None, label_encoder=None):
     if df_new_data.empty:
         print("Data baru kosong, tidak ada pembaruan model.")
-        return model
+        return None # Or return the existing model if passed
 
-    X_new = df_new_data.copy()
-    y_new = X_new.pop(TARGET_COLUMN)
+    X_new = df_new_data.drop(columns=[TARGET_COLUMN], errors='ignore')
+    y_new_raw = df_new_data[TARGET_COLUMN]
 
     if preprocessor is None:
         if os.path.exists(PREPROCESSOR_PATH):
             preprocessor = joblib.load(PREPROCESSOR_PATH)
         else:
-            print("Preprocessor tidak ditemukan. Latih model awal terlebih dahulu.")
+            print("Preprocessor numerik tidak ditemukan. Latih model awal terlebih dahulu.")
             return None
     
-    # Transform using only the features the preprocessor expects
-    update_features = [col for col in ALL_NUMERIC_FEATURES if col in X_new.columns] + CATEGORICAL_FEATURES
-    X_new_processed = preprocessor.transform(X_new[update_features])
-
-    if model is None:
-        if os.path.exists(MODEL_PATH):
-            model = joblib.load(MODEL_PATH)
-            print("Memuat model yang sudah ada untuk pembaruan...")
-        else:
-            print("Model tidak ditemukan. Latih model awal terlebih dahulu.")
+    if label_encoder is None:
+        if os.path.exists(LABEL_ENCODER_PATH):
+            label_encoder = joblib.load(LABEL_ENCODER_PATH)
+        else: # Should not happen if train_initial_model was called
+            print("LabelEncoder tidak ditemukan. Latih model awal terlebih dahulu.")
             return None
-            
-    if not hasattr(model, 'partial_fit'):
-        print("Model yang dimuat tidak mendukung partial_fit.")
-        return model
-
-    if os.path.exists(CLASSES_PATH):
-        classes = np.load(CLASSES_PATH, allow_pickle=True)
-    else:
-        print("File kelas target tidak ditemukan.")
-        classes = np.unique(y_new) 
-
-    print("Memperbarui model secara inkremental...")
+    
+    # Check for new classes in y_new_raw and update label_encoder if necessary
+    # This is complex for incremental updates if CatBoost model structure (output layer) can't change easily.
+    # For simplicity, CatBoost's `fit` with `init_model` expects same classes.
+    # If new classes appear, a full retrain or a more complex strategy is needed.
+    # Here, we assume classes are known from initial training or we retrain label_encoder.
+    # For now, let's assume new data doesn't introduce new classes not seen by label_encoder.
+    # If it does, label_encoder.transform will fail.
     try:
-        if not hasattr(model, 'coef_'): 
-             print("Model belum pernah dilatih, menggunakan partial_fit dengan classes.")
-             model.partial_fit(X_new_processed, y_new, classes=classes)
-        else:
-             model.partial_fit(X_new_processed, y_new)
-    except NotFittedError:
-        print("Model belum pernah dilatih (NotFittedError), menggunakan partial_fit dengan classes.")
-        model.partial_fit(X_new_processed, y_new, classes=classes)
-    except ValueError as ve:
-        print(f"ValueError selama partial_fit: {ve}")
-        return model 
+        y_new_encoded = label_encoder.transform(y_new_raw)
+    except ValueError as e:
+        print(f"Data baru mengandung kelas target yang tidak dikenal: {e}. Model tidak dapat diperbarui secara langsung dengan kelas baru ini.")
+        # Option: retrain label_encoder and model from scratch with all data.
+        # Option: ignore new data with unknown classes for this update.
+        return joblib.load(existing_model_path) if existing_model_path and os.path.exists(existing_model_path) else None
 
-    joblib.dump(model, MODEL_PATH)
-    print(f"Model yang diperbarui disimpan di {MODEL_PATH}")
 
-    y_pred_new = model.predict(X_new_processed)
-    print("Laporan Klasifikasi pada Data Baru (setelah pembaruan):")
-    # Ensure all known classes are passed to labels for consistent report
-    all_known_classes = np.load(CLASSES_PATH, allow_pickle=True) if os.path.exists(CLASSES_PATH) else np.unique(y_new)
-    print(classification_report(y_new, y_pred_new, labels=all_known_classes, zero_division=0))
+    numeric_features_for_model = [col for col in ALL_NUMERIC_FEATURES if col in X_new.columns]
+    categorical_features_for_model = [col for col in CATEGORICAL_FEATURES if col in X_new.columns]
+
+    X_new_processed_numeric = pd.DataFrame(preprocessor.transform(X_new[numeric_features_for_model]), columns=numeric_features_for_model, index=X_new.index)
+    X_new_final_for_model = pd.concat([X_new_processed_numeric, X_new[categorical_features_for_model].reset_index(drop=True)], axis=1)
+
+    cat_feature_indices = [X_new_final_for_model.columns.get_loc(col) for col in categorical_features_for_model]
+
+    # Load existing model to continue training
+    if existing_model_path and os.path.exists(existing_model_path):
+        print(f"Memuat model CatBoost dari {existing_model_path} untuk pembaruan...")
+        updated_model = CatBoostClassifier()
+        updated_model.load_model(existing_model_path)
+    else:
+        print("Model awal tidak ditemukan untuk pembaruan. Ini seharusnya tidak terjadi jika alur diikuti.")
+        # Fallback: train a new model just on this new data (not ideal for 'incremental')
+        # Or, better, require train_initial_model to be run first.
+        return None 
+
+    print("Memperbarui model CatBoost secara inkremental (melanjutkan pelatihan)...")
+    updated_model.fit(
+        X_new_final_for_model, y_new_encoded,
+        cat_features=cat_feature_indices,
+        init_model=updated_model, # Use the loaded model as a starting point
+        # verbose=10
+    )
+
+    updated_model.save_model(existing_model_path) # Overwrite the model with the updated one
+    print(f"Model CatBoost yang diperbarui disimpan di {existing_model_path}")
+
+    y_pred_encoded = updated_model.predict(X_new_final_for_model)
+    y_pred_labels = label_encoder.inverse_transform(y_pred_encoded.flatten().astype(int))
     
-    return model
+    print("Laporan Klasifikasi pada Data Baru (setelah pembaruan):")
+    print(classification_report(y_new_raw, y_pred_labels, labels=label_encoder.classes_, zero_division=0))
+    
+    return updated_model
 
-def predict_risk(data_input_dict, model=None, preprocessor=None):
-    if model is None:
-        if os.path.exists(MODEL_PATH):
-            model = joblib.load(MODEL_PATH)
-        else:
-            print("Model tidak ditemukan untuk prediksi.")
-            return None, None
+
+def predict_risk(data_input_dict, model_path=MODEL_PATH, preprocessor_path=PREPROCESSOR_PATH, label_encoder_path=LABEL_ENCODER_PATH):
+    model = CatBoostClassifier()
+    if os.path.exists(model_path):
+        model.load_model(model_path)
+    else:
+        print("Model CatBoost tidak ditemukan untuk prediksi.")
+        return None, None
             
-    if preprocessor is None:
-        if os.path.exists(PREPROCESSOR_PATH):
-            preprocessor = joblib.load(PREPROCESSOR_PATH)
-        else:
-            print("Preprocessor tidak ditemukan untuk prediksi.")
-            return None, None
+    if os.path.exists(preprocessor_path):
+        preprocessor = joblib.load(preprocessor_path)
+    else:
+        print("Preprocessor numerik tidak ditemukan untuk prediksi.")
+        return None, None
+        
+    if os.path.exists(label_encoder_path):
+        label_encoder = joblib.load(label_encoder_path)
+    else:
+        print("LabelEncoder tidak ditemukan untuk prediksi.")
+        return None, None
 
     df_input = pd.DataFrame([data_input_dict])
     
-    # Ensure all columns preprocessor was trained on are present for transform
-    # These are `preprocessor.feature_names_in_` or derived from its transformers
-    # For simplicity, we use the list derived when preprocessor was fitted.
-    # This requires careful handling if preprocessor was fit on a subset of ALL_NUMERIC_FEATURES.
-    
-    # Get the actual numeric feature names the preprocessor was fitted with
-    # This is a bit tricky as ColumnTransformer might not directly expose this easily for all its sub-transformers
-    # A robust way is to save this list when `get_preprocessor` fits.
-    # For now, we assume `existing_numeric_features_in_df` from `get_preprocessor` is what we need.
-    # However, `get_preprocessor` is only called during training.
-    # A better way: save the list of columns used to fit the preprocessor.
-    # Let's assume PREPROCESSOR_FEATURES_LIST_PATH for this.
-    
-    # Simplified: ensure all ALL_NUMERIC_FEATURES and CATEGORICAL_FEATURES are available, fill with NaN if missing.
-    # The imputer in the preprocessor should handle these NaNs.
-    for col in ALL_NUMERIC_FEATURES: # All possible numeric features
+    # Ensure 'Sektor' is string, fill other NAs for numeric features for preprocessor
+    for col in CATEGORICAL_FEATURES:
+        if col in df_input.columns:
+            df_input[col] = df_input[col].astype(str)
+        else: # If a categorical feature like Sektor is missing from input
+            df_input[col] = 'Unknown' # Or some placeholder CatBoost can handle
+
+    # Ensure all ALL_NUMERIC_FEATURES are present, fill with NaN if missing, preprocessor's imputer will handle this
+    numeric_features_in_input = []
+    for col in ALL_NUMERIC_FEATURES: 
         if col not in df_input.columns:
             df_input[col] = np.nan 
-    for col in CATEGORICAL_FEATURES: # All categorical features
-        if col not in df_input.columns:
-            df_input[col] = None # Or a placeholder that OneHotEncoder can ignore or handle
-
-    # The preprocessor expects specific columns in a specific order based on its fitting.
-    # We need to provide df_input with columns that preprocessor.transformers_ expects.
-    # `existing_numeric_features_in_df` was used to fit. We need this list for transform.
-    # This is a common challenge with sklearn ColumnTransformer if not all features are always present.
+        if col in df_input.columns: # Check again because it might have been added
+             numeric_features_in_input.append(col)
     
-    # Let's try to get the features the preprocessor *expects* for numeric part
+    # Get the list of numeric features the preprocessor was actually trained on
+    # This should be stored or inferred reliably from the preprocessor object
     try:
-        num_features_expected = preprocessor.transformers_[0][2] # Columns for 'num' transformer
-        cat_features_expected = preprocessor.transformers_[1][2] # Columns for 'cat' transformer
-        expected_cols_for_transform = num_features_expected + cat_features_expected
-    except Exception: # Fallback if introspection fails
-        print("Warning: Could not reliably determine preprocessor's expected features. Falling back to ALL_NUMERIC + CATEGORICAL")
-        expected_cols_for_transform = [col for col in ALL_NUMERIC_FEATURES if col in df_input.columns] + CATEGORICAL_FEATURES
+        # Example: if preprocessor is ColumnTransformer, get feature names from its 'num' part
+        # This part needs to be robust. Assuming preprocessor.transformers_[0][2] holds the list.
+        # For safety, let's use the features present in input that are also in ALL_NUMERIC_FEATURES
+        expected_numeric_cols_for_transform = preprocessor.transformers_[0][2]
+    except AttributeError: # If preprocessor is not a ColumnTransformer or structure is different
+        print("Warning: Could not reliably determine preprocessor's expected numeric features. Using intersection of input and ALL_NUMERIC_FEATURES.")
+        expected_numeric_cols_for_transform = [f for f in numeric_features_in_input if f in ALL_NUMERIC_FEATURES]
 
+
+    df_input_numeric_processed = pd.DataFrame(preprocessor.transform(df_input[expected_numeric_cols_for_transform]), columns=expected_numeric_cols_for_transform, index=df_input.index)
+    
+    # Categorical features for the model
+    categorical_features_for_model = [col for col in CATEGORICAL_FEATURES if col in df_input.columns]
+    df_input_final = pd.concat([df_input_numeric_processed, df_input[categorical_features_for_model].reset_index(drop=True)], axis=1)
+    
+    # Ensure column order matches training if CatBoost is sensitive (usually not if using feature names)
+    # For `cat_features` indices, they are based on X_final_for_model during training.
+    # So, the order of columns in df_input_final should ideally match that.
+    # However, CatBoost `predict` can often handle DataFrames with feature names directly.
+    
+    # Get categorical feature indices for prediction time based on df_input_final columns
+    cat_feature_indices_pred = [df_input_final.columns.get_loc(col) for col in categorical_features_for_model if col in df_input_final.columns]
 
     try:
-        # Ensure df_input has all columns in expected_cols_for_transform, in that order
-        # Fill missing ones with NaN or appropriate placeholder
-        df_for_transform = pd.DataFrame(columns=expected_cols_for_transform)
-        for col in expected_cols_for_transform:
-            if col in df_input.columns:
-                df_for_transform[col] = df_input[col]
-            elif col in ALL_NUMERIC_FEATURES: # If it's a numeric feature expected but missing
-                 df_for_transform[col] = np.nan
-            elif col in CATEGORICAL_FEATURES: # If it's a categorical feature expected but missing
-                 df_for_transform[col] = None # Imputer/OneHot should handle
-
-        # If df_for_transform is empty due to no matching columns (edge case)
-        if df_for_transform.empty and not df_input.empty :
-             df_for_transform = df_input[expected_cols_for_transform].copy()
-
-
-        data_processed = preprocessor.transform(df_for_transform)
+        prediction_encoded = model.predict(df_input_final, cat_features=cat_feature_indices_pred)
+        proba = model.predict_proba(df_input_final, cat_features=cat_feature_indices_pred)
+        
+        # Prediction is likely [[index]], flatten and convert to int for label_encoder
+        predicted_label = label_encoder.inverse_transform(prediction_encoded.astype(int).flatten())[0]
+        
+        proba_dict = dict(zip(label_encoder.classes_, proba[0]))
+        return predicted_label, proba_dict
     except NotFittedError:
-        print("Preprocessor belum dilatih.")
-        return None, None
-    except ValueError as ve:
-        print(f"Error saat memproses data input: {ve}")
-        return None, None
-    except KeyError as ke:
-        print(f"Error KeyError saat memproses data input: {ke}. Kolom mungkin hilang dari input atau preprocessor.")
-        return None, None
-
-
-    try:
-        prediction = model.predict(data_processed)
-        proba = model.predict_proba(data_processed)
-        model_classes = model.classes_
-        proba_dict = dict(zip(model_classes, proba[0]))
-        return prediction[0], proba_dict
-    except NotFittedError:
-        print("Model belum dilatih (NotFittedError).")
+        print("Model CatBoost belum dilatih (NotFittedError).")
         return None, None
     except Exception as e:
-        print(f"Error saat prediksi: {e}")
+        print(f"Error saat prediksi CatBoost: {e}")
         return None, None
 
 if __name__ == '__main__':
-    print("Menjalankan contoh alur kerja incremental_model_trainer...")
+    print("Menjalankan contoh alur kerja incremental_model_trainer dengan CatBoost...")
+    # Clean up old model files for a fresh run
     if os.path.exists(MODEL_PATH): os.remove(MODEL_PATH)
     if os.path.exists(PREPROCESSOR_PATH): os.remove(PREPROCESSOR_PATH)
     if os.path.exists(CLASSES_PATH): os.remove(CLASSES_PATH)
-    print("Model, preprocessor, dan file kelas lama (jika ada) telah dihapus untuk demo.")
+    if os.path.exists(LABEL_ENCODER_PATH): os.remove(LABEL_ENCODER_PATH)
+    print("Model, preprocessor, label encoder, dan file kelas lama (jika ada) telah dihapus untuk demo.")
 
     all_data = load_all_datasets()
 
@@ -338,66 +382,78 @@ if __name__ == '__main__':
     else:
         print(f"Total data dimuat: {len(all_data)} baris.")
         
-        # For reliable preprocessor fitting, ensure all Sektor categories are seen
-        # and a good representation of numeric features.
-        # Using all_data to fit preprocessor initially is safer.
-        # Then, split for train/update.
-        
-        # Create preprocessor based on all available data to learn all columns and categories
-        # We will save it, then potentially overwrite it in train_initial_model if force_retrain_preprocessor is True
-        # but the preprocessor there will be fit only on df_initial.
-        # It's better to ensure preprocessor is fit once on a dataset that has all possible columns.
-        
-        # Let's refine: get_preprocessor should be robust.
-        # It will try to load. If not found, it creates based on df_for_fitting_preprocessor.
-        # So, the first call to get_preprocessor (via train_initial_model) defines it.
-        
-        if len(all_data) >= 10: # Ensure enough data for a meaningful split
-             df_initial = all_data.sample(n=min(len(all_data), 15), random_state=42) # Use a small, diverse initial set
+        # Example: Split data for initial training and incremental updates
+        # This is a simplified split. In reality, data might arrive chronologically or by other means.
+        if len(all_data) >= 10:
+             df_initial = all_data.sample(frac=0.7, random_state=42)
              df_new_incremental = all_data.drop(df_initial.index)
         elif len(all_data) > 0:
             df_initial = all_data 
             df_new_incremental = pd.DataFrame() 
-        else:
+        else: # Should be caught by all_data.empty()
             df_initial = pd.DataFrame()
             df_new_incremental = pd.DataFrame()
 
         print(f"Data awal untuk pelatihan: {len(df_initial)} baris.")
         print(f"Data baru untuk pembaruan inkremental: {len(df_new_incremental)} baris.")
 
+        trained_model = None
         if not df_initial.empty:
-            model, preprocessor = train_initial_model(df_initial, force_retrain_preprocessor=True)
+            # Force retrain preprocessor and label encoder for the first run
+            trained_model, preproc, lbl_enc = train_initial_model(
+                df_initial, 
+                force_retrain_preprocessor=True, 
+                force_retrain_labelencoder=True
+            )
 
-            if model and preprocessor and not df_new_incremental.empty:
+            if trained_model and not df_new_incremental.empty:
                 print("\n--- Memperbarui model dengan data inkremental ---")
-                # Split df_new_incremental into smaller chunks to simulate multiple updates
-                chunk_size = 10
-                num_chunks = int(np.ceil(len(df_new_incremental) / chunk_size))
-                for i in range(num_chunks):
-                    chunk = df_new_incremental.iloc[i*chunk_size : (i+1)*chunk_size]
-                    print(f"\nMengupdate dengan chunk {i+1}/{num_chunks} ({len(chunk)} baris)")
-                    model = update_model_incrementally(chunk, model=model, preprocessor=preprocessor)
+                # Simulate incremental update with the rest of the data
+                # In a real scenario, df_new_incremental might be a stream or smaller batches
+                trained_model = update_model_incrementally(
+                    df_new_incremental, 
+                    existing_model_path=MODEL_PATH, # Pass the path to the saved initial model
+                    preprocessor=preproc, 
+                    label_encoder=lbl_enc
+                )
             elif not df_new_incremental.empty:
                  print("Pelatihan model awal gagal, pembaruan inkremental dilewati.")
 
-
-            if model and preprocessor:
+            if trained_model: # Check if model is available (either initial or updated)
                 print("\n--- Melakukan prediksi pada sampel data ---")
+                # Use a sample from the incremental data if available, else from initial
                 sample_source_df = df_new_incremental if not df_new_incremental.empty else df_initial
                 if not sample_source_df.empty:
-                    sample_input_series = sample_source_df.iloc[0]
-                    sample_input_dict = sample_input_series.drop(TARGET_COLUMN).to_dict()
+                    sample_input_series = sample_source_df.drop(columns=[TARGET_COLUMN], errors='ignore').iloc[0]
+                    sample_actual_category = sample_source_df[TARGET_COLUMN].iloc[0]
                     
-                    print(f"Input untuk prediksi (dari {sample_input_series['NamaPerusahaan']} - {sample_input_series['Sektor']} - {sample_input_series['PeriodeTahun']}):")
-                    # print(sample_input_dict) # Can be very long
+                    sample_input_dict = sample_input_series.to_dict()
                     
-                    predicted_category, probabilities = predict_risk(sample_input_dict, model, preprocessor)
+                    # For 'Sektor', ensure it's part of the dict if it was a named series index or similar
+                    if 'Sektor' not in sample_input_dict and 'Sektor' in sample_input_series.index:
+                         sample_input_dict['Sektor'] = sample_input_series['Sektor']
+                    elif 'Sektor' not in sample_input_dict and 'Sektor' in df_initial.columns : # Fallback if series lost it
+                         sample_input_dict['Sektor'] = df_initial[df_initial.index == sample_input_series.name]['Sektor'].iloc[0]
+
+
+                    print(f"Input untuk prediksi (data dari baris acak):")
+                    # print(sample_input_dict) 
+                    
+                    # Make sure 'Sektor' key exists in the sample_input_dict for predict_risk
+                    if 'Sektor' not in sample_input_dict:
+                        print("Peringatan: 'Sektor' tidak ada dalam input dictionary untuk prediksi. Ini mungkin menyebabkan error.")
+                        # Attempt to add it if it's an index or known from the source series
+                        if isinstance(sample_input_series.name, tuple) and 'Sektor' in sample_input_series.name.index: # MultiIndex
+                             sample_input_dict['Sektor'] = sample_input_series.name['Sektor']
+                        # This part might need more robust handling based on how sample_input_series is structured
+
+                    predicted_category, probabilities = predict_risk(sample_input_dict) # Uses default paths
                     print(f"Prediksi Kategori Risiko: {predicted_category}")
                     print(f"Probabilitas: {probabilities}")
-                    print(f"Kategori Sebenarnya: {sample_input_series[TARGET_COLUMN]}")
+                    print(f"Kategori Sebenarnya: {sample_actual_category}")
                 else:
                     print("Tidak ada data sampel untuk prediksi.")
             else:
-                print("Model atau preprocessor tidak tersedia untuk prediksi.")
+                print("Model tidak tersedia untuk prediksi (mungkin gagal dilatih atau diperbarui).")
         else:
             print("Tidak ada data awal yang cukup untuk melatih model.")
