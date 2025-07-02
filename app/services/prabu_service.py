@@ -38,13 +38,12 @@ KEY_MAP_PRABU = {
     "Beban Penjualan": "Beban penjualan",
     "Beban Administrasi dan Umum": "Beban administrasi dan umum",
     "Jumlah Liabilitas": "Jumlah liabilitas",
-    "Laba Tahun Berjalan": "Laba tahun berjalan",
+    "Laba Tahun Berjalan": "Laba/rugi tahun berjalan",
     "Arus Kas Bersih yang Diperoleh dari Aktivitas Operasi": "Arus kas bersih yang diperoleh dari aktivitas operasi",
     "Jumlah Aset Lancar": "Jumlah aset lancar",
-    "Aset Tetap": "Aset tetap", # Ini adalah Aset Tetap (Neto)
-    "Modal Kerja Bersih": "Modal kerja bersih", # Digunakan oleh Altman Z-Score jika dihitung manual, tapi modulnya menghitung dari Aset Lancar - Liabilitas Jk Pendek
+    "Aset Tetap": "Aset tetap",
     "Laba Ditahan": "Laba ditahan",
-    "Laba Sebelum Pajak Penghasilan": "Laba sebelum pajak penghasilan",
+    "Laba Sebelum Pajak Penghasilan": "Laba/rugi sebelum pajak penghasilan",
     "Beban Bunga": "Beban bunga",
     "Jumlah Ekuitas": "Jumlah ekuitas",
     "Jumlah Liabilitas Jangka Pendek": "Jumlah liabilitas jangka pendek",
@@ -60,13 +59,12 @@ KEY_MAP_PRABU = {
     "BEBAN PENJUALAN": "Beban penjualan",
     "BEBAN ADMINISTRASI DAN UMUM": "Beban administrasi dan umum",
     "JUMLAH LIABILITAS": "Jumlah liabilitas",
-    "LABA TAHUN BERJALAN": "Laba tahun berjalan",
+    "LABA TAHUN BERJALAN": "Laba/rugi tahun berjalan",
     "ARUS KAS BERSIH YANG DIPEROLEH DARI AKTIVITAS OPERASI": "Arus kas bersih yang diperoleh dari aktivitas operasi",
     "JUMLAH ASET LANCAR": "Jumlah aset lancar",
     "ASET TETAP": "Aset tetap",
-    "MODAL KERJA BERSIH": "Modal kerja bersih",
     "LABA DITAHAN": "Laba ditahan",
-    "LABA SEBELUM PAJAK PENGHASILAN": "Laba sebelum pajak penghasilan",
+    "LABA SEBELUM PAJAK PENGHASILAN": "Laba/rugi sebelum pajak penghasilan",
     "BEBAN BUNGA": "Beban bunga",
     "JUMLAH EKUITAS": "Jumlah ekuitas",
     "JUMLAH LIABILITAS JANGKA PENDEK": "Jumlah liabilitas jangka pendek",
@@ -80,10 +78,10 @@ KEY_MAP_PRABU = {
     "Penjualan Bersih": "Pendapatan bersih",
     "Harga Pokok Penjualan": "Beban pokok pendapatan", # Perlu dipastikan apakah PrabuModule menggunakannya atau Laba Bruto
     "Laba Kotor": "Laba bruto",
-    "EBIT (Laba Sebelum Bunga dan Pajak)": "Laba sebelum pajak penghasilan", # Ini perlu dihitung jika tidak ada, EBIT = EBT + Interest
-    "EBT (Laba Sebelum Pajak)": "Laba sebelum pajak penghasilan",
+    "EBIT (Laba Sebelum Bunga dan Pajak)": "Laba/rugi sebelum pajak penghasilan", # Ini perlu dihitung jika tidak ada, EBIT = EBT + Interest
+    "EBT (Laba Sebelum Pajak)": "Laba/rugi sebelum pajak penghasilan",
     "Pajak Penghasilan": "Beban pajak penghasilan", # Tidak langsung dipakai, tapi bisa untuk validasi
-    "Laba Bersih": "Laba tahun berjalan",
+    "Laba Bersih": "Laba/rugi tahun berjalan",
     "Arus Kas dari Aktivitas Operasi": "Arus kas bersih yang diperoleh dari aktivitas operasi",
     "Aset Tetap (Neto)": "Aset tetap",
     "Aset Tetap (Bruto)": "Aset tetap bruto",
@@ -329,11 +327,11 @@ if __name__ == '__main__':
         "Pendapatan bersih": 108249000000000.0, 
         "Jumlah aset": 101003000000000.0, 
         "Jumlah liabilitas": 16289000000000.0, 
-        "Laba tahun berjalan": 21661000000000.0, 
+        "Laba/rugi tahun berjalan": 21661000000000.0, 
         "Jumlah aset lancar": 19238000000000.0, 
         "Jumlah liabilitas jangka pendek": 14300000000000.0, 
         "Laba ditahan": 65000000000000.0, 
-        "Laba sebelum pajak penghasilan": 22136000000000.0, 
+        "Laba/rugi sebelum pajak penghasilan": 22136000000000.0, 
         "Beban bunga": 550000000000.0, 
         "Jumlah ekuitas": 84714000000000.0, 
         "Piutang usaha": 13200000000000.0, 
@@ -345,7 +343,6 @@ if __name__ == '__main__':
         "Arus kas bersih yang diperoleh dari aktivitas operasi": 3135000000000.0, 
         "Aset tetap": 55000000000000.0, # Aset Tetap (Neto)
         "Jumlah aset tidak lancar": 81765000000000.0,
-        "Modal kerja bersih": 4938000000000.0 # Aset Lancar - Liabilitas Jk Pendek
     }
 
     sample_data_t_minus_1 = {

@@ -52,7 +52,7 @@ def get_financial_ratios_for_prabu(financial_data_t: dict, financial_data_t_minu
         ratios['debt_ratio'] = None
 
     # Rasio Profitabilitas
-    net_income = _get_value(financial_data_t, "Laba tahun berjalan")
+    net_income = _get_value(financial_data_t, "Laba/rugi tahun berjalan")
     sales = _get_value(financial_data_t, "Pendapatan bersih")
     if net_income is not None and sales is not None and sales > 0:
         ratios['net_profit_margin'] = net_income / sales
@@ -68,7 +68,7 @@ def get_financial_ratios_for_prabu(financial_data_t: dict, financial_data_t_minu
     else:
         ratios['roe'] = None
         
-    ebt = _get_value(financial_data_t, "Laba sebelum pajak penghasilan")
+    ebt = _get_value(financial_data_t, "Laba/rugi sebelum pajak penghasilan")
     # "Beban bunga" dari parser keuangan umumnya adalah nilai positif yang merepresentasikan biaya.
     # Jika disimpan sebagai negatif (misalnya, pendapatan bunga > beban bunga), maka perlu penyesuaian.
     # Asumsi di sini: "Beban bunga" adalah biaya bunga (angka positif) atau 0.
@@ -231,8 +231,8 @@ if __name__ == '__main__':
     dummy_data_t = {
         "Jumlah aset lancar": 2000, "Jumlah liabilitas jangka pendek": 1000,
         "Jumlah liabilitas": 1500, "Jumlah ekuitas": 2500, "Jumlah aset": 4000,
-        "Laba tahun berjalan": 300, "Pendapatan bersih": 3000,
-        "Laba sebelum pajak penghasilan": 400, "Beban bunga": 50,
+        "Laba/rugi tahun berjalan": 300, "Pendapatan bersih": 3000,
+        "Laba/rugi sebelum pajak penghasilan": 400, "Beban bunga": 50,
         "Piutang usaha": 500, "Laba bruto": 1000, "Aset tetap": 1500,
         "Beban penyusutan": 150, 
         "Beban penjualan": 300, "Beban administrasi dan umum": 200, # SGA = 500
@@ -242,8 +242,8 @@ if __name__ == '__main__':
     dummy_data_t_minus_1 = {
         "Jumlah aset lancar": 1800, "Jumlah liabilitas jangka pendek": 900,
         "Jumlah liabilitas": 1400, "Jumlah ekuitas": 2000, "Jumlah aset": 3400,
-        "Laba tahun berjalan": 200, "Pendapatan bersih": 2500,
-        "Laba sebelum pajak penghasilan": 300, "Beban bunga": 40,
+        "Laba/rugi tahun berjalan": 200, "Pendapatan bersih": 2500,
+        "Laba/rugi sebelum pajak penghasilan": 300, "Beban bunga": 40,
         "Piutang usaha": 400, "Laba bruto": 800, "Aset tetap": 1300,
         "Beban penyusutan": 120, 
         "Beban penjualan": 250, "Beban administrasi dan umum": 150, # SGA = 400
@@ -259,7 +259,7 @@ if __name__ == '__main__':
     print("\n--- Skenario 2 ---")
     dummy_data_t_buruk = dummy_data_t.copy()
     dummy_data_t_buruk["Jumlah aset lancar"] = 800
-    dummy_data_t_buruk["Laba tahun berjalan"] = 50
+    dummy_data_t_buruk["Laba/rugi tahun berjalan"] = 50
     prediction2 = predict_credit_risk_v2(dummy_data_t_buruk, dummy_data_t_minus_1, beneish_score_input=-1.0, altman_z_score_input=1.0)
     print(f"Skor Risiko Kredit: {prediction2['credit_risk_score']}, Kategori: {prediction2['risk_category']}")
 
@@ -283,7 +283,7 @@ if __name__ == '__main__':
     print("\n--- Skenario 6 (CR & NPM buruk) ---")
     dummy_data_t_s6 = dummy_data_t.copy()
     dummy_data_t_s6["Jumlah aset lancar"] = 800 # CR = 0.8
-    dummy_data_t_s6["Laba tahun berjalan"] = 30 # NPM = 0.01
+    dummy_data_t_s6["Laba/rugi tahun berjalan"] = 30 # NPM = 0.01
     prediction6 = predict_credit_risk_v2(dummy_data_t_s6, dummy_data_t_minus_1)
     print(f"Skor Risiko Kredit: {prediction6['credit_risk_score']}, Kategori: {prediction6['risk_category']}")
 
@@ -311,8 +311,8 @@ if __name__ == '__main__':
     good_data_t = {
         "Jumlah aset lancar": 3000, "Jumlah liabilitas jangka pendek": 1000, # CR = 3
         "Jumlah liabilitas": 1500, "Jumlah ekuitas": 3500, "Jumlah aset": 5000, # DtE = 1500/3500 = 0.42
-        "Laba tahun berjalan": 750, "Pendapatan bersih": 5000, # NPM = 0.15
-        "Laba sebelum pajak penghasilan": 900, "Beban bunga": 50, # EBIT = 950
+        "Laba/rugi tahun berjalan": 750, "Pendapatan bersih": 5000, # NPM = 0.15
+        "Laba/rugi sebelum pajak penghasilan": 900, "Beban bunga": 50, # EBIT = 950
         "Arus kas bersih yang diperoleh dari aktivitas operasi": 800,
         "Laba ditahan": 2000, "Piutang usaha": 600, "Laba bruto": 2000, 
         "Aset tetap": 1800, "Beban penyusutan": 100, 
@@ -323,8 +323,8 @@ if __name__ == '__main__':
          # data lain bisa sama atau sedikit berbeda, tidak terlalu krusial untuk contoh ini
         "Jumlah aset lancar": 2800, "Jumlah liabilitas jangka pendek": 900, 
         "Jumlah liabilitas": 1400, "Jumlah ekuitas": 3000, "Jumlah aset": 4400, 
-        "Laba tahun berjalan": 600, 
-        "Laba sebelum pajak penghasilan": 700, "Beban bunga": 40, 
+        "Laba/rugi tahun berjalan": 600, 
+        "Laba/rugi sebelum pajak penghasilan": 700, "Beban bunga": 40, 
         "Piutang usaha": 500, "Laba bruto": 1800, "Aset tetap": 1600, 
         "Beban penyusutan": 90,  
         "Beban penjualan": 450, "Beban administrasi dan umum": 250, 
@@ -339,8 +339,8 @@ if __name__ == '__main__':
     bad_data_t = {
         "Jumlah aset lancar": 800, "Jumlah liabilitas jangka pendek": 1000, # CR = 0.8
         "Jumlah liabilitas": 3000, "Jumlah ekuitas": 500, "Jumlah aset": 3500, # DtE = 3000/500 = 6
-        "Laba tahun berjalan": -200, "Pendapatan bersih": 2000, # NPM = -0.1
-        "Laba sebelum pajak penghasilan": -150, "Beban bunga": 100, # EBIT = -50
+        "Laba/rugi tahun berjalan": -200, "Pendapatan bersih": 2000, # NPM = -0.1
+        "Laba/rugi sebelum pajak penghasilan": -150, "Beban bunga": 100, # EBIT = -50
         "Arus kas bersih yang diperoleh dari aktivitas operasi": -50,
         "Laba ditahan": -500, "Piutang usaha": 700, "Laba bruto": 300, 
         "Aset tetap": 2500, "Beban penyusutan": 300, 
@@ -350,8 +350,8 @@ if __name__ == '__main__':
         "Pendapatan bersih": 2200, # Sales growth = (2000-2200)/2200 = -0.09
         "Jumlah aset lancar": 900, "Jumlah liabilitas jangka pendek": 950, 
         "Jumlah liabilitas": 2800, "Jumlah ekuitas": 600, "Jumlah aset": 3400, 
-        "Laba tahun berjalan": -100, 
-        "Laba sebelum pajak penghasilan": -80, "Beban bunga": 90, 
+        "Laba/rugi tahun berjalan": -100, 
+        "Laba/rugi sebelum pajak penghasilan": -80, "Beban bunga": 90, 
         "Piutang usaha": 650, "Laba bruto": 350, "Aset tetap": 2400, 
         "Beban penyusutan": 280,  
         "Beban penjualan": 750, "Beban administrasi dan umum": 380, 

@@ -153,34 +153,38 @@ def inisialisasi_nltk_resources_sarana():
 inisialisasi_nltk_resources_sarana()
 
 DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_DEFAULT = [
-    {"kata_dasar": "Jumlah aset lancar", "variasi": ["Jumlah aset lancar", "Total aset lancar", "Aset lancar"]},
-    {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Total aset tidak lancar", "Aset tidak lancar"]},
-    {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Total liabilitas jangka pendek", "Liabilitas jangka pendek"]},
-    {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Total liabilitas jangka panjang", "Liabilitas jangka panjang"]},
-    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Total liabilitas", "Liabilitas"]},
-    {"kata_dasar": "Jumlah ekuitas", "variasi": ["Jumlah ekuitas", "Total ekuitas", "Ekuitas"]},
-    {"kata_dasar": "Jumlah liabilitas dan ekuitas", "variasi": ["Jumlah liabilitas dan ekuitas", "Total liabilitas dan ekuitas", "Liabilitas dan ekuitas"]},
-    {"kata_dasar": "Pendapatan bersih", "variasi": ["Pendapatan bersih", "Penjualan bersih", "Total pendapatan", "Total penjualan"]},
-    {"kata_dasar": "Beban pokok pendapatan", "variasi": ["Beban pokok pendapatan", "Harga pokok penjualan", "Hpp"]},
-    {"kata_dasar": "Laba bruto", "variasi": ["Laba bruto", "Laba kotor", "Gross profit"]},
-    {"kata_dasar": "Laba sebelum pajak penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba/(rugi) sebelum pajak penghasilan", "Laba sebelum pajak", "Laba sebelum pajak penghasilan dan beban pajak"]},
-    {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan", "Pajak penghasilan", "Tax expense"]},
-    {"kata_dasar": "Laba tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba bersih tahun berjalan", "Laba bersih", "Net income", "Laba periode berjalan"]},
-    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Total aset", "Total aktiva"]},
-    {"kata_dasar": "Piutang usaha", "variasi": ["Piutang usaha", "Piutang Dagang", "Piutang usaha Pihak Ketiga", "Net Receivables", "Trade Receivables"]},
-    {"kata_dasar": "Aset tetap", "variasi": ["Aset tetap", "Total Aset tetap", "Property, Plant, Equipment, Net", "Aset tetap Bersih"]}, # Digunakan oleh Beneish
-    {"kata_dasar": "Aset tetap bruto", "variasi": ["Aset tetap, setelah dikurangi akumulasi depresiasi sebesar", "Aset tetap, setelah dikurangi"]},
-    {"kata_dasar": "Akumulasi penyusutan", "variasi": ["Akumulasi penyusutan", "Accumulated Depreciation"]},
-    {"kata_dasar": "Modal kerja bersih", "variasi": ["Modal kerja bersih", "Working Capital", "Modal Kerja"]},
-    {"kata_dasar": "Laba ditahan", "variasi": ["Laba ditahan", "Saldo laba", "Retained earnings", "Saldo laba yang belum ditentukan penggunaannya"]},
-    {"kata_dasar": "Beban bunga", "variasi": ["Beban bunga", "Interest expense", "Biaya keuangan", "Biaya bunga", "Beban keuangan"]},
-    {"kata_dasar": "Beban penyusutan", "variasi": ["Beban penyusutan", "Beban depresiasi", "Depresiasi dan amortisasi", "Depreciation and amortization expense"]},
-    {"kata_dasar": "Beban penjualan", "variasi": ["Beban penjualan", "Selling expenses"]},
-    {"kata_dasar": "Beban administrasi dan umum", "variasi": ["Beban administrasi dan umum", "General and administrative expenses", "Beban umum dan administrasi"]},
-    {"kata_dasar": "Beban usaha", "variasi": ["Beban usaha", "Beban operasi", "Total beban usaha"]},
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas operasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas operasi", "Arus kas bersih dari aktivitas operasi", "Net cash from operating activities"]},
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas investasi", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas investasi", "Arus kas bersih dari aktivitas investasi", "Net cash from investing activities"]}, # Kasus khusus
-    {"kata_dasar": "Arus kas bersih yang diperoleh dari aktivitas pendanaan", "variasi": ["Arus kas bersih yang diperoleh dari aktivitas pendanaan", "Arus kas bersih dari aktivitas pendanaan", "Net cash from financing activities"]},
+    # ASET 
+    {"kata_dasar": "Jumlah aset", "variasi": ["Jumlah aset", "Jumlah Aset", "JUMLAH ASET", "Total aset", "Total Aset", "TOTAL ASET", "Total aktiva", "Total Aktiva", "TOTAL AKTIVA"]},
+    {"kata_dasar": "Jumlah aset lancar", "variasi": ["Jumlah aset lancar", "Jumlah Aset Lancar", "JUMLAH ASET LANCAR", "Total aset lancar", "Total Aset Lancar", "TOTAL ASET LANCAR"]},
+    {"kata_dasar": "Jumlah aset tidak lancar", "variasi": ["Jumlah aset tidak lancar", "Jumlah Aset Tidak Lancar", "JUMLAH ASET TIDAK LANCAR", "Total aset tidak lancar", "Total Aset Tidak Lancar", "TOTAL ASET TIDAK LANCAR", "Aset tidak lancar", "Aset Tidak Lancar", "ASET TIDAK LANCAR"]},
+    {"kata_dasar": "Piutang usaha", "variasi": ["Piutang usaha", "Piutang Usaha", "PIUTANG USAHA", "Piutang usaha - neto", "Piutang Usaha - Neto", "PIUTANG USAHA - NETO", "Trade Receivables", "Trade receivables", "TRADE RECEIVABLES", "Trade receivables - net", "Trade Receivables - Net", "TRADE RECEIVABLES - NET"]},
+    {"kata_dasar": "Aset tetap", "variasi": ["Aset tetap", "Aset Tetap", "ASET TETAP", "Aset tetap - neto", "Aset Tetap - Neto", "ASET TETAP - NETO"]},
+    {"kata_dasar": "Aset tetap bruto", "variasi": ["Aset tetap, setelah dikurangi akumulasi depresiasi sebesar", "Aset Tetap, Setelah Dikurangi Akumulasi Depresiasi Sebesar", "ASET TETAP, SETELAH DIKURANGI AKUMULASI DEPRESIASI SEBESAR", "Aset tetap, setelah dikurangi", "Aset Tetap, Setelah Dikurangi", "ASET TETAP, SETELAH DIKURANGI"]},
+    
+    # LIABILITAS & EKUITAS
+    {"kata_dasar": "Jumlah liabilitas jangka pendek", "variasi": ["Jumlah liabilitas jangka pendek", "Jumlah Liabilitas Jangka Pendek", "JUMLAH LIABILITAS JANGKA PENDEK", "Total liabilitas jangka pendek", "Total Liabilitas Jangka Pendek", "TOTAL LIABILITAS JANGKA PENDEK", "Liabilitas jangka pendek", "Liabilitas Jangka Pendek", "LIABILITAS JANGKA PENDEK"]},
+    {"kata_dasar": "Jumlah liabilitas jangka panjang", "variasi": ["Jumlah liabilitas jangka panjang", "Jumlah Liabilitas Jangka Panjang", "JUMLAH LIABILITAS JANGKA PANJANG", "Total liabilitas jangka panjang", "Total Liabilitas Jangka Panjang", "TOTAL LIABILITAS JANGKA PANJANG", "Liabilitas jangka panjang", "Liabilitas Jangka Panjang", "LIABILITAS JANGKA PANJANG"]},
+    {"kata_dasar": "Jumlah liabilitas", "variasi": ["Jumlah liabilitas", "Jumlah Liabilitas", "JUMLAH LIABILITAS", "Total liabilitas", "Total Liabilitas", "TOTAL LIABILITAS", "Liabilitas", "LIABILITAS"]},
+    {"kata_dasar": "Jumlah ekuitas", "variasi": ["Jumlah ekuitas", "Jumlah Ekuitas", "JUMLAH EKUITAS", "Total ekuitas", "Total Ekuitas", "TOTAL EKUITAS", "Ekuitas", "EKUITAS"]},
+    {"kata_dasar": "Jumlah liabilitas dan ekuitas", "variasi": ["Jumlah liabilitas dan ekuitas", "Jumlah Liabilitas dan Ekuitas", "JUMLAH LIABILITAS DAN EKUITAS", "Jumlah ekuitas dan liabilitas", "Jumlah Ekuitas dan Liabilitas", "JUMLAH EKUITAS DAN LIABILITAS", "Total liabilitas dan ekuitas", "Total Liabilitas dan Ekuitas", "TOTAL LIABILITAS DAN EKUITAS", "Total ekuitas dan liabilitas", "Total Ekuitas dan Liabilitas", "TOTAL EKUITAS DAN LIABILITAS"]},
+
+    # LABA RUGI
+    {"kata_dasar": "Pendapatan bersih", "variasi": ["Pendapatan bersih", "Pendapatan Bersih", "PENDAPATAN BERSIH", "Penjualan bersih", "Penjualan Bersih", "PENJUALAN BERSIH", "Total pendapatan", "Total Pendapatan", "TOTAL PENDAPATAN", "Total penjualan", "Total Penjualan", "TOTAL PENJUALAN"]},
+    {"kata_dasar": "Beban pokok pendapatan", "variasi": ["Beban pokok pendapatan", "Beban Pokok Pendapatan", "BEBAN POKOK PENDAPATAN", "Harga pokok penjualan", "Harga Pokok Penjualan", "HARGA POKOK PENJUALAN"]},
+    {"kata_dasar": "Laba bruto", "variasi": ["Laba bruto", "Laba Bruto", "LABA BRUTO", "Laba kotor", "Laba Kotor", "LABA KOTOR", "Gross profit", "Gross Profit", "GROSS PROFIT"]},  
+    
+    {"kata_dasar": "Beban usaha", "variasi": ["Beban usaha", "Beban Usaha", "BEBAN USAHA", "Jumlah beban usaha", "Jumlah Beban Usaha", "JUMLAH BEBAN USAHA", "Operating expenses", "Operating Expenses", "OPERATING EXPENSES", "Total operating expenses", "Total Operating Expenses", "TOTAL OPERATING EXPENSES"]},
+    {"kata_dasar": "Beban penjualan", "variasi": ["Beban penjualan", "Beban Penjualan", "BEBAN PENJUALAN", "Selling expenses", "Selling Expenses", "SELLING EXPENSES"]},
+    {"kata_dasar": "Beban administrasi dan umum", "variasi": ["Beban administrasi dan umum", "Beban Administrasi dan Umum", "BEBAN ADMINISTRASI DAN UMUM", "General and administrative expenses", "General And Administrative Expenses", "GENERAL AND ADMINISTRATIVE EXPENSES", "Beban umum dan administrasi", "Beban Umum dan Administrasi", "BEBAN UMUM DAN ADMINISTRASI"]},
+
+    {"kata_dasar": "Laba/rugi sebelum pajak penghasilan", "variasi": ["Laba sebelum pajak penghasilan", "Laba Sebelum Pajak Penghasilan", "LABA SEBELUM PAJAK PENGHASILAN", "Laba/(rugi) sebelum pajak penghasilan", "Laba/(Rugi) Sebelum Pajak Penghasilan", "LABA/(RUGI) SEBELUM PAJAK PENGHASILAN", "Laba sebelum pajak", "Rugi sebelum pajak penghasilan", "Rugi Sebelum Pajak Penghasilan", "RUGI SEBELUM PAJAK PENGHASILAN"]},
+    {"kata_dasar": "Beban pajak penghasilan", "variasi": ["Beban pajak penghasilan", "Beban Pajak Penghasilan", "BEBAN PAJAK PENGHASILAN", "Pajak penghasilan", "Pajak Penghasilan", "PAJAK PENGHASILAN", "Tax expense", "Tax Expense", "TAX EXPENSE", "Income tax expense", "Income Tax Expense", "INCOME TAX EXPENSE"]},
+    {"kata_dasar": "Laba/rugi tahun berjalan", "variasi": ["Laba tahun berjalan", "Laba Tahun Berjalan", "LABA TAHUN BERJALAN", "Laba bersih tahun berjalan", "Laba Bersih Tahun Berjalan", "LABA BERSIH TAHUN BERJALAN", "Laba/rugi bersih", "Laba/Rugi Bersih", "LABA/RUGI BERSIH", "Net profit/loss", "Net Profit/Loss", "NET PROFIT/LOSS"]},
+    
+    {"kata_dasar": "Akumulasi penyusutan", "variasi": ["Akumulasi penyusutan", "Akumulasi Penyusutan", "AKUMULASI PENYUSUTAN", "Accumulated Depreciation", "Accumulated depreciation", "ACCUMULATED DEPRECIATION"]},
+    {"kata_dasar": "Laba ditahan", "variasi": ["Laba ditahan", "Laba Ditahan", "LABA DITAHAN", "Saldo laba", "Saldo Laba", "SALDO LABA", "Retained earnings", "Retained Earnings", "RETAINED EARNINGS", "Saldo laba yang belum ditentukan penggunaannya", "Saldo Laba yang Belum Ditentukan Penggunaannya", "SALDO LABA YANG BELUM DITENTUKAN PENGGUNAANNYA"]},
+    {"kata_dasar": "Beban bunga", "variasi": ["Beban bunga", "Beban Bunga", "BEBAN BUNGA", "Interest expense", "Interest Expense", "INTEREST EXPENSE", "Biaya keuangan", "Biaya Keuangan", "BIAYA KEUANGAN", "Biaya bunga", "Biaya Bunga", "BIAYA BUNGA", "Beban keuangan", "Beban Keuangan", "BEBAN KEUANGAN"]},
+    {"kata_dasar": "Beban penyusutan", "variasi": ["Beban penyusutan", "Beban Penyusutan", "BEBAN PENYUSUTAN", "Beban depresiasi", "Beban Depresiasi", "BEBAN DEPRESIASI", "Depresiasi dan amortisasi", "Depresiasi dan Amortisasi", "DEPRESIASI DAN AMORTISASI", "Depreciation and amortization expense", "Depreciation And Amortization Expense", "DEPRECIATION AND AMORTIZATION EXPENSE"]},
 ]
 DEFAULT_FINANCIAL_KEYWORDS_SARANA_FLAT = [item['kata_dasar'] for item in DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_DEFAULT]
 

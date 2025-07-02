@@ -16,7 +16,7 @@ def calculate_beneish_m_score(data_t, data_t_minus_1):
         "Piutang usaha", "Pendapatan bersih", "Laba bruto",
         "Jumlah aset tidak lancar", "Jumlah aset", "Beban penyusutan",
         "Aset tetap bruto", "Beban penjualan", "Beban administrasi dan umum",
-        "Jumlah liabilitas", "Laba tahun berjalan",
+        "Jumlah liabilitas", "Laba/rugi tahun berjalan",
         "Arus kas bersih yang diperoleh dari aktivitas operasi",
         "Jumlah aset lancar", "Aset tetap" # Aset tetap netto
     ]
@@ -48,7 +48,7 @@ def calculate_beneish_m_score(data_t, data_t_minus_1):
         ppe_gross_t = float(data_t["Aset tetap bruto"])
         sga_expenses_t = float(data_t["Beban penjualan"]) + float(data_t["Beban administrasi dan umum"])
         total_liabilities_t = float(data_t["Jumlah liabilitas"])
-        net_income_t = float(data_t["Laba tahun berjalan"])
+        net_income_t = float(data_t["Laba/rugi tahun berjalan"])
         cfo_t = float(data_t["Arus kas bersih yang diperoleh dari aktivitas operasi"])
         current_assets_t = float(data_t["Jumlah aset lancar"])
         ppe_net_t = float(data_t["Aset tetap"])
@@ -237,7 +237,7 @@ if __name__ == '__main__':
         "Jumlah aset tidak lancar": 81765000000000.0, "Jumlah aset": 101003000000000.0, 
         "Beban penyusutan": 2750000000000.0, "Aset tetap bruto": 66000000000000.0, 
         "Beban penjualan": 3300000000000.0, "Beban administrasi dan umum": 2200000000000.0,
-        "Jumlah liabilitas": 16289000000000.0, "Laba tahun berjalan": 21661000000000.0,
+        "Jumlah liabilitas": 16289000000000.0, "Laba/rugi tahun berjalan": 21661000000000.0,
         "Arus kas bersih yang diperoleh dari aktivitas operasi": 3135000000000.0,
         "Jumlah aset lancar": 19238000000000.0, "Aset tetap": 55000000000000.0
     }
@@ -246,7 +246,7 @@ if __name__ == '__main__':
         "Jumlah aset tidak lancar": 75000000000000.0, "Jumlah aset": 93000000000000.0, 
         "Beban penyusutan": 2500000000000.0, "Aset tetap bruto": 60000000000000.0, 
         "Beban penjualan": 3000000000000.0, "Beban administrasi dan umum": 2000000000000.0,
-        "Jumlah liabilitas": 14800000000000.0, "Laba tahun berjalan": 19600000000000.0, # Laba tahun berjalan t-1 tidak dipakai di formula M-score
+        "Jumlah liabilitas": 14800000000000.0, "Laba/rugi tahun berjalan": 19600000000000.0, # Laba/rugi tahun berjalan t-1 tidak dipakai di formula M-score
         "Arus kas bersih yang diperoleh dari aktivitas operasi": 2800000000000.0, # CFO t-1 tidak dipakai
         "Jumlah aset lancar": 1800000000000.0, "Aset tetap": 50000000000000.0
     }

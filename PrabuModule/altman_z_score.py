@@ -16,7 +16,7 @@ def calculate_altman_z_score(data_t, model_type="public_manufacturing"):
     """
     required_keys = [
         "Jumlah aset lancar", "Jumlah aset", "Laba ditahan",
-        "Laba sebelum pajak penghasilan", "Beban bunga", # Untuk EBIT
+        "Laba/rugi sebelum pajak penghasilan", "Beban bunga", # Untuk EBIT
         "Jumlah ekuitas", # Sebagai proxy Market Value of Equity jika tidak ada data pasar
         "Jumlah liabilitas", "Pendapatan bersih",
         "Jumlah liabilitas jangka pendek"
@@ -30,7 +30,7 @@ def calculate_altman_z_score(data_t, model_type="public_manufacturing"):
         working_capital = float(data_t["Jumlah aset lancar"]) - float(data_t["Jumlah liabilitas jangka pendek"])
         total_assets = float(data_t["Jumlah aset"])
         retained_earnings = float(data_t["Laba ditahan"])
-        ebit = float(data_t["Laba sebelum pajak penghasilan"]) + float(data_t["Beban bunga"])
+        ebit = float(data_t["Laba/rugi sebelum pajak penghasilan"]) + float(data_t["Beban bunga"])
         # Menggunakan Nilai Buku Ekuitas sebagai proxy untuk Nilai Pasar Ekuitas
         # Jika nilai pasar ekuitas tersedia, itu harus digunakan.
         market_value_equity = float(data_t["Jumlah ekuitas"])
@@ -213,87 +213,3 @@ def get_altman_z_score_analysis(data_t, is_public_company=True, market_value_equ
         "zone": zone,
         "model_used": model_type
     }
-
-if __name__ == '__main__':
-    # Contoh data (sesuaikan dengan data Astra yang sudah diupdate jika perlu)
-    data_t_astra_example = {
-        "Modal kerja bersih": 4938000000000.0, # Aset Lancar - Liabilitas Jk Pendek
-        "Jumlah aset": 101003000000000.0,
-        "Laba ditahan": 65000000000000.0,
-        "Laba sebelum pajak penghasilan": 22136000000000.0,
-        "Beban bunga": 550000000000.0,
-        "Jumlah ekuitas": 84714000000000.0, # Nilai Buku Ekuitas
-        "Jumlah liabilitas": 16289000000000.0,
-        "Pendapatan bersih": 108249000000000.0
-    }
-
-    model_types_to_test = ["public_manufacturing", "private_manufacturing", "non_manufacturing_or_emerging_markets"]
-
-    for mt in model_types_to_test:
-        print(f"\n--- Menghitung Altman Z-Score untuk Model: {mt} ---")
-        z_score_val, z_ratios = calculate_altman_z_score(data_t_astra_example, model_type=mt)
-
-        if z_score_val is not None:
-            print(f"Altman Z-Score ({z_ratios.get('model_type', mt)}): {z_score_val:.4f}")
-            print("Rasio Altman:")
-            for ratio_name, ratio_value in z_ratios.items():
-                if ratio_name not in ["error", "model_type", "interpretation_zones", "X4_note"]:
-                    print(f"  {ratio_name}: {ratio_value:.4f}")
-            if "X4_note" in z_ratios:
-                print(f"  Note for X4: {z_ratios['X4_note']}")
-
-            zones = z_ratios.get("interpretation_zones", {})
-            print("Interpretasi Zona:")
-            if mt == "public_manufacturing":
-                if z_score_val > 2.99: print("  Perusahaan berada di 'Safe Zone'.")
-                elif z_score_val > 1.81: print("  Perusahaan berada di 'Grey Zone'.")
-                else: print("  Perusahaan berada di 'Distress Zone'.")
-            elif mt == "private_manufacturing":
-                if z_score_val > 2.90: print("  Perusahaan berada di 'Safe Zone'.") # Menggunakan batas 2.90
-                elif z_score_val > 1.23: print("  Perusahaan berada di 'Grey Zone'.")
-                else: print("  Perusahaan berada di 'Distress Zone'.")
-            elif mt == "non_manufacturing_or_emerging_markets":
-                # Interpretasi umum: > 2.6 (Aman), 1.1 - 2.6 (Abu-abu), < 1.1 (Distress)
-                if z_score_val > 2.60: print("  Perusahaan berada di 'Safe Zone'.")
-                elif z_score_val > 1.10: print("  Perusahaan berada di 'Grey Zone'.")
-                else: print("  Perusahaan berada di 'Distress Zone'.")
-            
-            print(f"  Zona Detail: {zones}")
-
-        else:
-            print(f"Tidak dapat menghitung Altman Z-Score ({mt}): {z_ratios.get('error', 'Alasan tidak diketahui')}")
-
-    print("\n--- Test dengan Data Hilang ---")
-    data_missing_z = data_t_astra_example.copy()
-    del data_missing_z["Modal kerja bersih"]
-    z_score_missing, z_ratios_missing = calculate_altman_z_score(data_missing_z)
-    if z_score_missing is None:
-        print(f"Berhasil menangani data hilang untuk Z-Score: {z_ratios_missing.get('error')}")
-    else:
-        print(f"Gagal menangani data hilang untuk Z-Score. Score: {z_score_missing}")
-
-    print("\n--- Test dengan Total Aset Nol ---")
-    data_zero_assets_z = data_t_astra_example.copy()
-    data_zero_assets_z["Jumlah aset"] = 0
-    z_score_zero_assets, z_ratios_zero_assets = calculate_altman_z_score(data_zero_assets_z)
-    if z_score_zero_assets is None:
-        print(f"Berhasil menangani Total Aset nol untuk Z-Score: {z_ratios_zero_assets.get('error')}")
-    else:
-        print(f"Gagal menangani Total Aset nol untuk Z-Score. Score: {z_score_zero_assets}")
-
-    print("\n--- Test dengan Total Liabilitas Nol (untuk X4) ---")
-    data_zero_liab_z = data_t_astra_example.copy()
-    data_zero_liab_z["Jumlah liabilitas"] = 0
-    z_score_zero_liab, z_ratios_zero_liab = calculate_altman_z_score(data_zero_liab_z)
-    if z_score_zero_liab is not None:
-        print(f"Altman Z-Score (Total Liabilitas = 0): {z_score_zero_liab:.4f}")
-        print(f"  X4: {z_ratios_zero_liab['X4 (Market Value of Equity / Total Liabilities)']:.4f}")
-    else:
-        print(f"Gagal menghitung Z-Score (Total Liabilitas = 0): {z_ratios_zero_liab.get('error')}")
-
-    print("\n--- Test dengan Model Type Tidak Valid ---")
-    z_score_invalid_model, z_ratios_invalid_model = calculate_altman_z_score(data_t_astra_example, model_type="invalid_model")
-    if z_score_invalid_model is None:
-        print(f"Berhasil menangani model type tidak valid: {z_ratios_invalid_model.get('error')}")
-    else:
-        print(f"Gagal menangani model type tidak valid. Score: {z_score_invalid_model}")

@@ -13,8 +13,8 @@ def calculate_common_financial_ratios(data_t):
     required_keys = [
         "Jumlah liabilitas", "Jumlah ekuitas", # Untuk Debt-to-Equity
         "Jumlah aset lancar", "Jumlah liabilitas jangka pendek", # Untuk Current Ratio
-        "Laba sebelum pajak penghasilan", "Beban bunga", # Untuk Interest Coverage Ratio
-        "Laba tahun berjalan", "Pendapatan bersih" # Untuk Net Profit Margin
+        "Laba/rugi sebelum pajak penghasilan", "Beban bunga", # Untuk Interest Coverage Ratio
+        "Laba/rugi tahun berjalan", "Pendapatan bersih" # Untuk Net Profit Margin
     ]
 
     # Cek apakah semua kunci yang dibutuhkan ada
@@ -28,13 +28,13 @@ def calculate_common_financial_ratios(data_t):
         total_equity = float(data_t["Jumlah ekuitas"])
         current_assets = float(data_t["Jumlah aset lancar"])
         current_liabilities = float(data_t["Jumlah liabilitas jangka pendek"])
-        ebit = float(data_t["Laba sebelum pajak penghasilan"]) + float(data_t.get("Beban bunga", 0)) # Beban bunga bisa 0
+        ebit = float(data_t["Laba/rugi sebelum pajak penghasilan"]) + float(data_t.get("Beban bunga", 0)) # Beban bunga bisa 0
         interest_expense = float(data_t.get("Beban bunga", 0)) # Beban bunga bisa 0
-        net_income = float(data_t["Laba tahun berjalan"])
+        net_income = float(data_t["Laba/rugi tahun berjalan"])
         sales = float(data_t["Pendapatan bersih"])
         
         # Pastikan ada beban bunga jika ebit digunakan untuk ICR
-        if "Beban bunga" not in data_t and "Laba sebelum pajak penghasilan" in data_t :
+        if "Beban bunga" not in data_t and "Laba/rugi sebelum pajak penghasilan" in data_t :
              # Jika beban bunga tidak ada, ICR tidak bisa dihitung dengan cara standar
              # namun kita bisa asumsikan 0 jika memang tidak ada.
              # 'Beban bunga' sudah di-default ke 0 di atas.
@@ -125,9 +125,9 @@ if __name__ == '__main__':
         "Jumlah ekuitas": 84714000000000.0,
         "Jumlah aset lancar": 19238000000000.0,
         "Jumlah liabilitas jangka pendek": 14300000000000.0,
-        "Laba sebelum pajak penghasilan": 22136000000000.0,
+        "Laba/rugi sebelum pajak penghasilan": 22136000000000.0,
         "Beban bunga": 550000000000.0,
-        "Laba tahun berjalan": 21661000000000.0,
+        "Laba/rugi tahun berjalan": 21661000000000.0,
         "Pendapatan bersih": 108249000000000.0,
         "Laba bruto": 10511000000000.0, # Untuk Gross Profit Margin
         "Jumlah aset": 101003000000000.0 # Untuk Debt Ratio
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     print("\n--- Test dengan Data Hilang (Beban Bunga) ---")
     data_missing_interest = data_t_astra_example.copy()
     del data_missing_interest["Beban bunga"] # Hapus Beban Bunga
-     # Laba sebelum pajak penghasilan tetap ada
+     # Laba/rugi sebelum pajak penghasilan tetap ada
     
     ratios_no_interest_item = calculate_common_financial_ratios(data_missing_interest)
     if "error" in ratios_no_interest_item:
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     data_zero_sales = data_t_astra_example.copy()
     data_zero_sales["Pendapatan bersih"] = 0
     data_zero_sales["Laba bruto"] = 0 # Jika sales 0, laba bruto juga 0
-    data_zero_sales["Laba tahun berjalan"] = 0 # Asumsi laba juga 0
+    data_zero_sales["Laba/rugi tahun berjalan"] = 0 # Asumsi laba juga 0
     ratios_zero_sales = calculate_common_financial_ratios(data_zero_sales)
     if "error" not in ratios_zero_sales:
         print(f"  Net Profit Margin: {ratios_zero_sales['Net Profit Margin']:.4f} ({ratios_zero_sales.get('Net Profit Margin_note')})")

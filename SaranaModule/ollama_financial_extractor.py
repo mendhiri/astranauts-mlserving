@@ -306,10 +306,10 @@ if __name__ == '__main__':
             print(json.dumps(extracted_data, indent=4, ensure_ascii=False))
 
             # Validasi sederhana
-            if "Laba Bersih" in extracted_data or "Laba tahun berjalan" in extracted_data:
-                print("\nINFO: 'Laba Bersih' atau 'Laba tahun berjalan' ditemukan dalam hasil.")
+            if "Laba Bersih" in extracted_data or "Laba/rugi tahun berjalan" in extracted_data:
+                print("\nINFO: 'Laba Bersih' atau 'Laba/rugi tahun berjalan' ditemukan dalam hasil.")
             else:
-                print("\nPERINGATAN: 'Laba Bersih' atau 'Laba tahun berjalan' TIDAK ditemukan. Periksa output JSON dan prompt.")
+                print("\nPERINGATAN: 'Laba Bersih' atau 'Laba/rugi tahun berjalan' TIDAK ditemukan. Periksa output JSON dan prompt.")
             
             if extracted_data: # Jika tidak kosong
                 first_key = list(extracted_data.keys())[0]
