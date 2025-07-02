@@ -1,3 +1,4 @@
+catboost
 fastapi
 google-cloud-storage
 google-cloud-aiplatform
