@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 
 try:
-    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, credit_risk_predictor, ml_credit_risk_predictor
+    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, ml_credit_risk_predictor
 except ImportError:
     # Fallback jika PrabuModule dianggap sebagai bagian dari 'app' (misalnya app.PrabuModule)
     # atau jika sys.path dimodifikasi untuk menyertakan root.
@@ -21,7 +21,7 @@ except ImportError:
         sys.path.insert(0, project_root)
     
     # Sekarang coba impor lagi
-    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, credit_risk_predictor, ml_credit_risk_predictor
+    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, ml_credit_risk_predictor
 
 # --- END Penyesuaian Impor ---
 
@@ -260,9 +260,16 @@ def run_prabu_analysis(
     # common_ratios_from_module = financial_ratios.calculate_common_financial_ratios(norm_data_t)
     # common_ratios_result = common_ratios_from_module # Ini dict biasa, akan dipetakan ke PrabuCommonRatios
 
-    # Lebih baik gunakan rasio yang sama dengan yang dipakai predictor
-    comprehensive_ratios = credit_risk_predictor.get_financial_ratios_for_prabu(norm_data_t, norm_data_t_minus_1)
-    if comprehensive_ratios:
+    # Menggunakan financial_ratios.calculate_common_financial_ratios yang ada.
+    # Ini mungkin menghasilkan lebih sedikit rasio daripada get_financial_ratios_for_prabu sebelumnya,
+    # karena calculate_common_financial_ratios hanya menerima data_t.
+    # Jika rasio dari data_t_minus_1 diperlukan, fungsi ini perlu diperluas.
+    if norm_data_t:
+        comprehensive_ratios = financial_ratios.calculate_common_financial_ratios(norm_data_t)
+    else:
+        comprehensive_ratios = {"error": "Data keuangan (norm_data_t) tidak tersedia untuk perhitungan rasio."}
+
+    if comprehensive_ratios and "error" not in comprehensive_ratios:
          # Perlu memastikan comprehensive_ratios tidak mengandung 'error' di level atasnya
          # Jika ada error parsial (misal, salah satu rasio None), itu tidak masalah.
          # Jika get_financial_ratios_for_prabu sendiri gagal total, ia mungkin return dict kosong atau None.

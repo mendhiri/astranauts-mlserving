@@ -1,122 +1,57 @@
-# Modul PRABU - Prediksi Risiko Kredit dengan Incremental Learning
+# PRABU Module (Predictive Analytics for Business Recommendation)
 
-## 1. Gambaran Umum
+## Deskripsi
 
-Modul PRABU ini telah ditingkatkan untuk menyediakan fungsionalitas prediksi risiko kredit menggunakan pendekatan Machine Learning (ML). Fitur utama dari versi ini adalah kemampuan **pembelajaran inkremental (incremental learning)**, yang memungkinkan model untuk terus belajar dan beradaptasi seiring waktu dengan masuknya data historis baru dan data dari berbagai sektor industri.
+PRABU Module adalah komponen inti dari aplikasi SATRIA yang bertanggung jawab untuk melakukan analisis risiko kredit secara mendalam dan memberikan rekomendasi keputusan kredit. Modul ini memanfaatkan kekuatan model Kecerdasan Buatan (AI) dan teknik analitik prediktif untuk mengevaluasi kelayakan kredit calon nasabah atau nasabah yang sudah ada, khususnya dalam konteks pembiayaan alat berat.
 
-Tujuan utamanya adalah untuk memprediksi kategori risiko kredit (`Low`, `Medium`, `High`) untuk sebuah perusahaan berdasarkan data keuangan dan informasi sektornya.
+Input utama untuk PRABU Module berasal dari data keuangan terstruktur yang telah diproses oleh SARANA Module. Selain itu, PRABU juga dapat mengintegrasikan data dari sumber lain jika relevan, termasuk informasi pasar dan data historis kinerja kredit.
 
-## 2. Komponen Utama
+## Fungsi Utama
 
-*   **`incremental_model_trainer.py`**:
-    *   Skrip inti yang bertanggung jawab untuk seluruh siklus hidup model ML.
-    *   Fungsi untuk memuat dataset dari file CSV.
-    *   Fungsi untuk melakukan pra-pemrosesan data, termasuk menangani nilai yang hilang (NaN), melakukan scaling pada fitur numerik, dan one-hot encoding pada fitur kategorikal seperti 'Sektor'.
-    *   Fungsi `train_initial_model()`: Untuk melatih model dari awal menggunakan batch data pertama.
-    *   Fungsi `update_model_incrementally()`: Untuk memperbarui model yang sudah ada dengan data baru (data historis atau data dari sektor baru) menggunakan teknik `partial_fit`.
-    *   Menyimpan dan memuat artefak model (model itu sendiri, preprocessor, dan daftar kelas target) ke/dari direktori `trained_models/`.
+1.  **Penerimaan Data:** Menerima data keuangan terstruktur dari SARANA Module dan sumber data relevan lainnya.
+2.  **Pemrosesan Fitur (Feature Engineering):**
+    *   Memilih fitur-fitur keuangan yang paling relevan untuk prediksi risiko kredit.
+    *   Membuat fitur-fitur baru dari data yang ada untuk meningkatkan kekuatan prediktif model (misalnya, rasio keuangan, tren pertumbuhan).
+    *   Menangani data yang hilang atau tidak lengkap.
+3.  **Pemodelan Risiko Kredit:**
+    *   Menggunakan berbagai model AI dan statistik (misalnya, Regresi Logistik, Random Forest, Gradient Boosting Machines, Neural Networks) untuk memprediksi probabilitas default (gagal bayar) atau metrik risiko kredit lainnya.
+    *   Melatih model menggunakan data historis kredit.
+    *   Melakukan validasi dan pengujian model untuk memastikan akurasi dan reliabilitas.
+4.  **Penghasilan Skor Kredit:** Menghasilkan skor kredit numerik yang merepresentasikan tingkat risiko dari seorang pemohon kredit. Skor ini membantu dalam standarisasi proses pengambilan keputusan.
+5.  **Analisis Penjelasan (Explainable AI - XAI):**
+    *   Menyediakan penjelasan mengenai faktor-faktor utama yang mempengaruhi skor kredit dan prediksi risiko. Ini dicapai dengan menggunakan metrik kuantitatif dan model bahasa skala besar (Large Language Models - LLMs) untuk menginterpretasikan hasil model AI.
+    *   Membantu pengguna (misalnya, analis kredit) memahami dasar dari rekomendasi yang diberikan oleh sistem.
+6.  **Pemberian Rekomendasi:** Memberikan rekomendasi keputusan kredit (misalnya, setujui, tolak, pertimbangkan dengan syarat tertentu) berdasarkan skor kredit dan analisis penjelasan.
+7.  **Pemantauan Model:** Secara berkala memantau kinerja model prediksi dan melakukan pembaruan atau pelatihan ulang jika diperlukan untuk menjaga akurasinya seiring waktu.
 
-*   **`ml_credit_risk_predictor.py`**:
-    *   Modul yang menyediakan fungsi `predict_credit_risk_ml(financial_data_dict, sector)` untuk melakukan prediksi pada data input baru.
-    *   Memuat model dan preprocessor yang sudah dilatih dari direktori `trained_models/`.
-    *   Mengembalikan prediksi kategori risiko beserta probabilitas untuk setiap kelas.
+## Teknologi yang Digunakan
 
-*   **`datasets/`**:
-    *   Direktori ini berisi contoh dataset sintetis dalam format CSV.
-    *   Setiap file CSV merepresentasikan data untuk satu perusahaan dalam satu sektor tertentu (misalnya, `tambang_jaya_pertambangan.csv`).
-    *   Dataset ini digunakan untuk mendemonstrasikan alur kerja pelatihan dan prediksi.
+*   **Machine Learning (ML):** Berbagai algoritma pembelajaran mesin untuk klasifikasi, regresi, dan clustering guna membangun model risiko kredit.
+    *   Contoh pustaka: Scikit-learn, TensorFlow, PyTorch, XGBoost, LightGBM.
+*   **Statistika:** Metode statistik untuk analisis data, pengujian hipotesis, dan validasi model.
+*   **Large Language Models (LLMs):** Model bahasa canggih yang digunakan untuk menghasilkan penjelasan yang mudah dipahami manusia mengenai output model AI. Ini membantu dalam menerjemahkan metrik kuantitatif yang kompleks menjadi narasi yang lebih intuitif.
+*   **Explainable AI (XAI) Techniques:** Metode seperti SHAP (SHapley Additive exPlanations) atau LIME (Local Interpretable Model-agnostic Explanations) untuk memahami kontribusi masing-masing fitur terhadap prediksi model.
 
-*   **`trained_models/`**:
-    *   Direktori ini secara otomatis dibuat oleh `incremental_model_trainer.py`.
-    *   Berisi file-file berikut setelah pelatihan:
-        *   `incremental_risk_model.joblib`: Model `SGDClassifier` yang telah dilatih.
-        *   `preprocessor.joblib`: Objek `ColumnTransformer` (dari scikit-learn) yang digunakan untuk pra-pemrosesan data.
-        *   `classes.npy`: Array NumPy berisi daftar kelas target unik (misalnya, ['High', 'Low', 'Medium']) yang dipelajari model.
+## Manfaat
 
-## 3. Model ML yang Digunakan
+*   **Keputusan Kredit yang Lebih Baik:** Meningkatkan akurasi dalam menilai risiko kredit, mengarah pada keputusan yang lebih tepat.
+*   **Objektivitas:** Mengurangi bias subjektif dalam proses evaluasi kredit.
+*   **Efisiensi:** Mempercepat proses analisis dan pengambilan keputusan kredit.
+*   **Transparansi:** Menyediakan penjelasan atas keputusan kredit melalui XAI, meningkatkan kepercayaan pengguna.
+*   **Manajemen Risiko Proaktif:** Memungkinkan identifikasi dini potensi risiko kredit.
+*   **Konsistensi:** Menerapkan kriteria penilaian yang konsisten untuk semua aplikasi kredit.
 
-Implementasi saat ini menggunakan `SGDClassifier` dari pustaka `scikit-learn`. Model ini dipilih karena dukungannya terhadap metode `partial_fit`, yang memungkinkannya untuk dilatih secara inkremental tanpa perlu memuat seluruh dataset setiap kali ada data baru.
+## Cara Kerja (Alur Umum)
 
-Model ini dikonfigurasi untuk:
-*   Menggunakan `loss='log_loss'` untuk memungkinkan output probabilitas.
-*   `class_weight='balanced'` untuk menangani potensi ketidakseimbangan kelas dalam data.
-*   `warm_start=True` agar pemanggilan `fit` atau `partial_fit` berikutnya melanjutkan dari state sebelumnya.
+1.  PRABU Module menerima data keuangan terstruktur dari SARANA Module.
+2.  Data melalui tahap *feature engineering* untuk persiapan input model.
+3.  Model AI yang telah dilatih memproses fitur-fitur tersebut untuk menghitung skor risiko kredit.
+4.  Teknik XAI dan LLM digunakan untuk menghasilkan penjelasan atas skor dan prediksi risiko.
+5.  Sistem menghasilkan rekomendasi keputusan kredit beserta skor dan penjelasannya.
+6.  Analis kredit menggunakan output dari PRABU Module sebagai dasar untuk membuat keputusan akhir.
 
-## 4. Struktur Dataset yang Diharapkan
+## Ketergantungan
 
-Model dan preprocessor mengharapkan data input dalam format tabular (misalnya, dari file CSV) dengan kolom-kolom berikut:
-
-*   **Fitur Umum**: Serangkaian rasio keuangan standar atau metrik yang relevan untuk semua sektor (misalnya, `CurrentRatio`, `DebtToEquityRatio`, `NetProfitMargin`, dll.).
-*   **Fitur Spesifik Sektor**: Kolom-kolom yang hanya relevan untuk sektor tertentu (misalnya, `Mining_ProductionVolume` untuk Pertambangan, `Construction_OrderBookValue` untuk Konstruksi).
-    *   Untuk data dari sektor tertentu, fitur spesifik sektor lain yang tidak relevan harus diisi dengan nilai kosong atau `NaN`. Preprocessor akan menangani ini dengan mengimputasinya (misalnya, menjadi 0).
-*   **`Sektor` (Kategorikal)**: Kolom teks yang menunjukkan sektor industri perusahaan (misalnya, "Pertambangan", "Konstruksi", "Agro"). Ini akan di-one-hot-encode oleh preprocessor.
-*   **`RiskCategory` (Target)**: Kolom target untuk pelatihan, berisi label kategori risiko seperti "Low", "Medium", atau "High".
-*   Kolom identifikasi lainnya seperti `UniqueID`, `NamaPerusahaan`, `PeriodeTahun`, `PeriodeKuartal` dapat ada dalam CSV tetapi akan diabaikan selama pelatihan model (sesuai konfigurasi `remainder='drop'` pada `ColumnTransformer`).
-
-Lihat file CSV di direktori `PrabuModule/datasets/` untuk contoh konkret.
-
-## 5. Alur Kerja Pelatihan dan Pembaruan
-
-### a. Pelatihan Awal
-1.  **Siapkan Data Awal**: Kumpulkan data dari satu atau beberapa sektor/periode awal dalam format CSV seperti yang dijelaskan di atas. Letakkan di subdirektori dalam `PrabuModule/datasets/` atau sesuaikan path di skrip.
-2.  **Jalankan Skrip Pelatih**: Eksekusi `python PrabuModule/incremental_model_trainer.py`.
-    *   Skrip contoh `if __name__ == '__main__':` akan memuat data, membaginya, dan memanggil `train_initial_model()`.
-    *   Ini akan membuat dan menyimpan `incremental_risk_model.joblib`, `preprocessor.joblib`, dan `classes.npy` di `PrabuModule/trained_models/`.
-    *   Pastikan untuk menghapus file model/preprocessor lama jika Anda ingin melatih ulang dari awal pada data yang berbeda. Skrip contoh sudah melakukan ini.
-
-### b. Pembaruan Inkremental
-1.  **Siapkan Data Baru**: Kumpulkan data baru (bisa data historis dari sektor yang sudah ada, atau data dari sektor yang benar-benar baru). Pastikan formatnya konsisten.
-2.  **Panggil Fungsi Pembaruan**:
-    *   Muat model dan preprocessor yang ada menggunakan `joblib.load()`.
-    *   Muat data baru ke dalam DataFrame pandas.
-    *   Panggil fungsi `incremental_model_trainer.update_model_incrementally(df_new_data, model, preprocessor)`.
-    *   Ini akan memperbarui model menggunakan `partial_fit` dan menyimpan kembali model yang telah diperbarui.
-    *   Contoh pemanggilan ini juga ada di bagian `if __name__ == '__main__':` pada `incremental_model_trainer.py`.
-
-## 6. Cara Melakukan Prediksi
-
-### a. Melalui REST API
-Setelah modul ini terintegrasi dengan layanan FastAPI (`app/services/prabu_service.py` dan `app/routers/prabu_router.py`), prediksi dapat dilakukan dengan mengirimkan request ke endpoint `/prabu/analyze`. Request body harus menyertakan data keuangan (`data_t`) dan `sector`.
-
-### b. Langsung dari Modul Python
-Anda dapat menggunakan fungsi `predict_credit_risk_ml` dari modul `PrabuModule.ml_credit_risk_predictor`:
-
-```python
-from PrabuModule import ml_credit_risk_predictor
-import importlib
-
-# Reload untuk memastikan model & preprocessor terbaru dari disk dimuat (penting jika baru saja diupdate)
-importlib.reload(ml_credit_risk_predictor)
-ml_credit_risk_predictor._load_resources()
-
-
-# Contoh data input (dictionary fitur, tanpa target)
-data_sample = {
-    'CurrentRatio': 1.8, 
-    'DebtToEquityRatio': 0.6, 
-    'NetProfitMargin': 0.12,
-    # ... (fitur umum lainnya)
-    'Mining_ProductionVolume': 4500, # Fitur spesifik jika sektornya Pertambangan
-    # ... (fitur spesifik sektor lainnya jika ada)
-}
-sektor_sample = 'Pertambangan'
-
-hasil_prediksi = ml_credit_risk_predictor.predict_credit_risk_ml(data_sample, sektor_sample)
-
-if hasil_prediksi['error']:
-    print(f"Error prediksi: {hasil_prediksi['error']}")
-else:
-    print(f"Kategori Risiko: {hasil_prediksi['risk_category']}")
-    print(f"Probabilitas: {hasil_prediksi['probabilities']}")
-```
-Pastikan `ml_credit_risk_predictor.py` dapat menemukan file model dan preprocessor yang sudah dilatih di `PrabuModule/trained_models/`.
-
-## 7. Catatan dan Pengembangan Lebih Lanjut
-
-*   **Kualitas Data**: Kinerja model sangat bergantung pada kualitas dan representativitas data pelatihan. Dataset sintetis yang digunakan saat ini hanya untuk demonstrasi. Untuk penggunaan nyata, diperlukan data keuangan riil yang beragam dan akurat.
-*   **Evaluasi Model**: Laporan klasifikasi sederhana disediakan. Untuk evaluasi yang lebih robust, pertimbangkan metrik lain, validasi silang (jika melatih ulang secara periodik), dan pemantauan kinerja model seiring waktu.
-*   **Hyperparameter Tuning**: Parameter `SGDClassifier` (seperti `alpha`, `learning_rate`, `eta0`) belum dioptimalkan. Tuning dapat meningkatkan kinerja.
-*   **Fitur Historis Eksplisit**: Saat ini, data historis digunakan untuk memperbarui model secara umum. Untuk menangkap tren waktu secara lebih eksplisit, pertimbangkan pembuatan fitur berbasis waktu (misalnya, perubahan rasio YoY, rata-rata bergerak).
-*   **Model Alternatif**: Meskipun `SGDClassifier` baik untuk incremental learning, model lain seperti pohon keputusan yang diupdate (misalnya, dengan melatih ulang pada data gabungan secara periodik) atau ensemble yang lebih canggih bisa dieksplorasi.
-*   **Penanganan Drift Konsep**: Jika hubungan antara fitur dan risiko kredit berubah secara signifikan dari waktu ke waktu (concept drift), model mungkin perlu dilatih ulang sepenuhnya atau menggunakan teknik adaptasi drift yang lebih canggih.
-```
+*   Kualitas dan ketersediaan data historis kredit sangat penting untuk melatih model AI yang akurat.
+*   Memerlukan input data yang bersih dan terstruktur dari SARANA Module.
+*   Keahlian dalam ilmu data dan pemodelan statistik diperlukan untuk pengembangan dan pemeliharaan modul ini.

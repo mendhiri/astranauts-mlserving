@@ -1,81 +1,45 @@
-# SARANA Module: Ekstraksi Data Keuangan Otomatis dari Dokumen
+# SATRIA (SATRIA as a Transformational Credit Risk Analysis Through Predictive Models and Context-Aware Intelligence)
 
-## Deskripsi
-SARANA (Sistem Analisis dan Ekstraksi Otomatis Narasi & Angka) adalah modul Python untuk ekstraksi data keuangan dari dokumen PDF, gambar, dan teks menggunakan pipeline OCR & NLP yang dioptimalkan. Cocok untuk analisis laporan keuangan, audit, dan riset data finansial.
-
-## Tujuan
-- Mengotomatisasi ekstraksi kata kunci dan angka keuangan dari dokumen tidak terstruktur.
-- Mendukung berbagai format input: PDF, gambar (JPG/PNG), dan teks.
-- Menyediakan pipeline pra-pemrosesan gambar dan pilihan engine OCR.
-- Hasil parsing rapi, siap analisis, dan mudah dievaluasi.
+SATRIA adalah aplikasi yang dirancang untuk merevolusi proses analisis risiko kredit, khususnya untuk pembiayaan alat berat. Aplikasi ini bertujuan untuk menyederhanakan dan meningkatkan akurasi dalam pengambilan keputusan kredit melalui pemanfaatan teknologi canggih.
 
 ## Fitur Utama
-- **Pipeline pra-pemrosesan gambar**: grayscale, denoising, sharpening, thresholding adaptif, deskew, border removal, contrast adjustment, resize (DPI 300/600), preset profile.
-- **Opsi engine OCR**: Tesseract (pytesseract) & EasyOCR.
-- **Pembersihan hasil teks**: normalisasi spasi, penghapusan karakter aneh, dsb.
-- **Ekstraksi kata kunci keuangan**: mendukung bahasa Indonesia & Inggris, regex robust untuk layout tabel/teks tidak terstruktur.
-- **Integrasi dengan pipeline NLP**: tokenisasi, stemming, dsb.
-- **Output JSON siap analisis**.
 
-## Alur Kerja
-1. **Input**: PDF/gambar/teks →
-2. **Pra-pemrosesan gambar** (jika input gambar) →
-3. **OCR** (pilih engine) →
-4. **Pembersihan teks** →
-5. **Ekstraksi kata kunci & angka keuangan** →
-6. **Output JSON**
+SATRIA terdiri dari tiga modul utama yang bekerja secara sinergis:
 
-## Instalasi
-1. **Clone repo & masuk folder**
-   ```bash
-   git clone https://github.com/astranauts/SARANA.git
-   cd SARANA
-   ```
-2. **Install dependensi Python**
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Install Tesseract (untuk macOS/Linux/Windows)**
-   - macOS: `brew install tesseract`
-   - Ubuntu: `sudo apt-get install tesseract-ocr`
-   - Windows: [Download installer](https://github.com/tesseract-ocr/tesseract)
-4. **Install resource NLTK** (jika error)
-   ```python
-   import nltk
-   nltk.download('punkt')
-   ```
+### 1. SARANA Module (SATRIA Document Processing)
+Modul SARANA bertanggung jawab untuk mengubah dokumen keuangan yang diajukan pengguna (seperti laporan keuangan, rekening koran, dll.) menjadi data terstruktur yang dapat dibaca mesin. Proses ini dilakukan dengan memanfaatkan teknologi Optical Character Recognition (OCR) dan Natural Language Processing (NLP). Hasilnya adalah data keuangan yang siap dianalisis, memungkinkan analisis keuangan yang skalabel dan konsisten.
 
-## Preset Pipeline Pra-pemrosesan
-- **default**: grayscale, denoise, sharpen, threshold, deskew, border removal, contrast, resize (DPI 300)
-- **fast**: grayscale, threshold, resize (DPI 150)
-- **highres**: semua fitur, resize (DPI 600)
-- **custom**: atur sendiri via argumen fungsi
+### 2. PRABU Module (Predictive Analytics for Business Recommendation)
+Modul PRABU menggunakan model Kecerdasan Buatan (AI) untuk menghasilkan skor risiko kredit dan wawasan yang dapat dijelaskan. Berdasarkan input fitur keuangan yang diterima dari Modul SARANA, PRABU menganalisis data menggunakan metrik kuantitatif dan model bahasa skala besar (Large Language Models). Ini memberikan panduan keputusan yang lebih informatif dan transparan bagi PT SANF.
 
-## Contoh Penggunaan
-```python
-from SaranaModule import parser_gambar
-# Ekstraksi dari gambar dengan preset 'default' dan engine 'tesseract'
-text = parser_gambar.ekstrak_teks_gambar('file.jpg', preset='default', engine='tesseract')
+### 3. SETIA Module (System for External Threat Identification and Analysis)
+Modul SETIA adalah sistem pencarian berbasis AI yang secara proaktif memantau data eksternal dari berbagai sumber seperti berita, media sosial, dan platform lainnya. Tujuannya adalah untuk mendeteksi risiko reputasi atau keuangan yang mungkin berdampak pada calon nasabah atau nasabah yang sudah ada. Informasi ini memperkaya profil risiko dan memastikan keputusan kredit didasarkan pada informasi terkini.
 
-from SaranaModule import pengekstrak_kata_kunci
-# Ekstraksi kata kunci keuangan
-hasil = pengekstrak_kata_kunci.ekstrak_kata_kunci(text)
+## Tujuan Proyek
+
+*   Mempermudah dan mempercepat proses pengajuan dan analisis kredit alat berat.
+*   Meningkatkan akurasi penilaian risiko kredit melalui model prediktif.
+*   Menyediakan wawasan yang lebih mendalam dan dapat dijelaskan terkait risiko kredit.
+*   Mengintegrasikan informasi dari sumber eksternal untuk penilaian risiko yang lebih komprehensif.
+*   Mendukung PT SANF dalam membuat keputusan kredit yang lebih baik dan lebih cepat.
+
+## Struktur Direktori (Contoh)
+
+```
+.
+├── README.md
+├── SaranaModule/
+│   ├── README.md
+│   └── ... (file dan folder terkait SaranaModule)
+├── PrabuModule/
+│   ├── README.md
+│   └── ... (file dan folder terkait PrabuModule)
+├── SetiaModule/
+│   ├── README.md
+│   └── ... (file dan folder terkait SetiaModule)
+└── ... (file dan konfigurasi lainnya)
 ```
 
-## Tips & Troubleshooting
-- **Error Tesseract not found**: pastikan sudah install & path tesseract dikenali OS.
-- **Error NLTK resource**: jalankan `nltk.download('punkt')` di Python shell.
-- **Hasil OCR kurang akurat**: coba preset lain, atau engine easyocr.
-- **Ekstraksi tabel/angka tidak rapi**: gunakan pipeline pra-pemrosesan lengkap & cek daftar kata kunci.
+## Kontribusi
 
-## Pengembangan Lanjutan
-- Integrasi ekstraksi tabel otomatis (Camelot, Tabula, dsb).
-- Peningkatan post-processing angka (normalisasi ribuan/desimal).
-- Penambahan preset pipeline & auto-tuning.
-- Evaluasi akurasi ekstraksi (lihat `evaluasi_akurasi.py`).
-
-## Lisensi
-MIT License © 2025 The Beyonders
-
-## Kontak & Kontribusi
-- Tim The Beyonders
+Informasi mengenai cara berkontribusi pada proyek ini akan ditambahkan di kemudian hari.
