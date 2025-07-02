@@ -24,7 +24,8 @@ async def analyze_financial_data(
             data_t_minus_1=request_data.data_t_minus_1,
             is_public_company=request_data.is_public_company,
             market_value_equity_manual=request_data.market_value_equity_manual,
-            altman_model_type_override=request_data.altman_model_type_override
+            altman_model_type_override=request_data.altman_model_type_override,
+            sector=request_data.sector # Tambahkan sector
         )
         
         # Jika layanan Prabu mengembalikan dictionary yang mengandung 'error' di level atas,

@@ -188,6 +188,24 @@ DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_DEFAULT = [
 ]
 DEFAULT_FINANCIAL_KEYWORDS_SARANA_FLAT = [item['kata_dasar'] for item in DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_DEFAULT]
 
+# Daftar Kata Kunci untuk Keuangan Individu (Contoh Sederhana)
+DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_INDIVIDU = [
+    {"kata_dasar": "Penghasilan Gaji", "variasi": ["Penghasilan gaji", "Gaji bersih", "Take home pay", "Gaji Pokok", "Upah"]},
+    {"kata_dasar": "Penghasilan Usaha (Individu)", "variasi": ["Penghasilan usaha", "Pendapatan usaha pribadi", "Omset usaha", "Laba usaha individu"]},
+    {"kata_dasar": "Penghasilan Lain-lain (Individu)", "variasi": ["Penghasilan lain-lain", "Pendapatan sewa", "Investasi", "Bonus"]},
+    {"kata_dasar": "Total Penghasilan Bruto (Individu)", "variasi": ["Total penghasilan bruto", "Total pendapatan kotor", "Jumlah pendapatan individu"]},
+    
+    {"kata_dasar": "Biaya Hidup Bulanan", "variasi": ["Biaya hidup", "Pengeluaran rutin", "Kebutuhan bulanan", "Total pengeluaran pribadi"]},
+    {"kata_dasar": "Cicilan Pinjaman Lain", "variasi": ["Cicilan pinjaman", "Angsuran kredit", "Cicilan KPR", "Cicilan mobil", "Cicilan kartu kredit"]},
+    {"kata_dasar": "Total Pengeluaran Bulanan (Individu)", "variasi": ["Total pengeluaran bulanan", "Jumlah biaya bulanan"]},
+
+    {"kata_dasar": "Penghasilan Bersih Bulanan (Individu)", "variasi": ["Penghasilan bersih bulanan", "Sisa penghasilan", "Net income pribadi"]},
+    
+    {"kata_dasar": "Total Aset Pribadi", "variasi": ["Total aset pribadi", "Jumlah kekayaan bersih", "Nilai aset individu"]},
+    {"kata_dasar": "Total Utang Pribadi", "variasi": ["Total utang pribadi", "Jumlah kewajiban individu", "Total pinjaman individu"]},
+]
+INDIVIDUAL_FINANCIAL_KEYWORDS_SARANA_FLAT = [item['kata_dasar'] for item in DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_INDIVIDU]
+
 
 def format_ke_json_sarana(kamus_data: dict, indentasi: int = 4) -> str:
     try:
@@ -765,7 +783,8 @@ def parse_financial_document(
     ollama_api_base_url: str | None = None,
     custom_financial_keywords: list[dict] | None = None, # list of {"kata_dasar": "X", "variasi": ["x1", "x2"]}
     image_preprocessing_options: dict | None = None, # For tesseract/easyocr
-    output_format: str = 'text' # 'text' or 'structured_json' (structured_json only for images via ollama for now)
+    output_format: str = 'text', # 'text' or 'structured_json' (structured_json only for images via ollama for now)
+    jenis_pengaju: str = 'korporat' # Tambahan parameter: 'korporat' atau 'individu'
 ) -> dict:
     """
     Mem-parsing dokumen keuangan (PDF, DOCX, TXT, XLSX, CSV, Gambar) dan mengekstrak teks atau data terstruktur.
@@ -788,7 +807,21 @@ def parse_financial_document(
     extracted_text_content = None
     structured_data_content = None
     error_message = None
-    parsing_info = f"File Type: {actual_file_type}, OCR Engine (if used): {ocr_engine_for_images_and_pdf}, PDF Method: {pdf_parsing_method}"
+    parsing_info = f"Jenis Pengaju: {jenis_pengaju}, File Type: {actual_file_type}, OCR Engine (if used): {ocr_engine_for_images_and_pdf}, PDF Method: {pdf_parsing_method}"
+
+    # Pilih daftar kata kunci berdasarkan jenis_pengaju
+    if custom_financial_keywords:
+        active_financial_keywords_list = custom_financial_keywords
+        active_financial_keywords_flat = [item['kata_dasar'] for item in custom_financial_keywords]
+        parsing_info += "; Using custom keywords"
+    elif jenis_pengaju == 'individu':
+        active_financial_keywords_list = DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_INDIVIDU
+        active_financial_keywords_flat = INDIVIDUAL_FINANCIAL_KEYWORDS_SARANA_FLAT
+        parsing_info += "; Using individual keywords"
+    else: # Default ke korporat
+        active_financial_keywords_list = DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_DEFAULT
+        active_financial_keywords_flat = DEFAULT_FINANCIAL_KEYWORDS_SARANA_FLAT
+        parsing_info += "; Using corporate keywords"
 
     # 1. Ekstraksi Teks Mentah / Data Terstruktur Awal
     try:
@@ -821,7 +854,7 @@ def parse_financial_document(
                     vision_model=ollama_vision_model,
                     llm_model_json=ollama_llm_model_for_json,
                     ollama_base_url_param=ollama_api_base_url,
-                    target_keywords_param=custom_financial_keywords, # Atau default jika None
+                    target_keywords_param=active_financial_keywords_flat, # Menggunakan kata kunci aktif (flat list)
                     vision_prompt_param=ollama_prompt_for_ocr # Prompt untuk tahap vision
                 )
                 # Jika sukses, structured_data_content akan berisi JSON. Jika error, akan ada field 'error'.
@@ -874,13 +907,13 @@ def parse_financial_document(
             detected_year = identifikasi_tahun_pelaporan_sarana(extracted_text_content)
             detected_multiplier = deteksi_pengali_global_sarana(extracted_text_content)
             
-            current_keywords_to_use = DAFTAR_KATA_KUNCI_KEUANGAN_SARANA_DEFAULT
-            if custom_financial_keywords and isinstance(custom_financial_keywords, list):
-                current_keywords_to_use = custom_financial_keywords
+            # current_keywords_to_use sudah ditentukan sebagai active_financial_keywords_list
+            # if custom_financial_keywords and isinstance(custom_financial_keywords, list):
+            #     current_keywords_to_use = custom_financial_keywords
             
             financial_data_from_text = ekstrak_data_keuangan_tahunan_sarana(
                 extracted_text_content,
-                daftar_kata_kunci=current_keywords_to_use,
+                daftar_kata_kunci=active_financial_keywords_list, # Menggunakan daftar kata kunci aktif
                 pengali_global=detected_multiplier
             )
             if not financial_data_from_text:
@@ -1036,3 +1069,4 @@ if __name__ == '__main__':
         print(f"Error saat membersihkan file dummy: {e_clean}")
 
     print("\n--- Contoh Penggunaan Sarana Service Selesai ---")
+    

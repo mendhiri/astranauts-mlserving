@@ -14,7 +14,8 @@ class PrabuAnalysisRequest(BaseModel):
     data_t_minus_1: Optional[Dict[str, Any]] = Field(None, example={"Pendapatan bersih": 800, "Jumlah aset": 1800, "Laba/rugi tahun berjalan": 80, "Piutang usaha":150, "Laba bruto":250, "Aset tetap bruto":900, "Beban penyusutan":40, "Beban penjualan":60, "Beban administrasi dan umum":70, "Arus kas bersih yang diperoleh dari aktivitas operasi":100, "Aset tetap":800, "Jumlah aset lancar": 700, "Jumlah liabilitas jangka pendek": 250, "Jumlah liabilitas": 400, "Jumlah ekuitas":1400})
     is_public_company: bool = True
     market_value_equity_manual: Optional[float] = None
-    altman_model_type_override: Optional[str] = Field(None, pattern=r"^(public_manufacturing|private_manufacturing|non_manufacturing_or_emerging_markets)$")
+    altman_model_type_override: Optional[str] = Field(None, pattern=r"^(public_manufacturing|private_manufacturing|non_manufacturing_or_emerging_markets)$"),
+    sector: Optional[str] = Field(None, example="Pertambangan", description="Sektor industri perusahaan untuk pemilihan model ML jika relevan")
 
 class PrabuRatios(BaseModel):
     """Model untuk rasio-rasio yang digunakan dalam Altman Z-Score."""
@@ -68,17 +69,24 @@ class PrabuCreditRiskPrediction(BaseModel):
     credit_risk_score: Optional[float] = Field(None, description="Skor risiko kredit (0-100, lebih tinggi = risiko lebih rendah)")
     risk_category: Optional[str] = Field(None, description="Kategori risiko (Low, Medium, High)")
     underlying_ratios: Optional[Dict[str, Optional[float]]] = Field(None, description="Rasio-rasio yang digunakan dalam model prediksi risiko")
-    altman_z_score_used: Optional[float] = Field(None, description="Nilai Altman Z-Score yang digunakan dalam prediksi")
-    beneish_m_score_used: Optional[float] = Field(None, description="Nilai Beneish M-Score yang digunakan dalam prediksi")
-    error: Optional[str] = Field(None, description="Pesan error jika prediksi risiko kredit gagal")
+    altman_z_score_used: Optional[float] = Field(None, description="Nilai Altman Z-Score yang digunakan dalam prediksi rule-based")
+    beneish_m_score_used: Optional[float] = Field(None, description="Nilai Beneish M-Score yang digunakan dalam prediksi rule-based")
+    error: Optional[str] = Field(None, description="Pesan error jika prediksi risiko kredit rule-based gagal")
+
+class PrabuMLCreditRiskPrediction(BaseModel):
+    """Hasil prediksi risiko kredit menggunakan model Machine Learning."""
+    risk_category: Optional[str] = Field(None, description="Kategori risiko hasil prediksi ML (Low, Medium, High)")
+    probabilities: Optional[Dict[str, float]] = Field(None, description="Probabilitas untuk setiap kategori risiko")
+    error: Optional[str] = Field(None, description="Pesan error jika prediksi risiko kredit ML gagal")
 
 
 class PrabuAnalysisResponse(BaseModel):
     """Respons lengkap dari analisis Prabu."""
     altman_z_score_analysis: PrabuAltmanAnalysis
     beneish_m_score_analysis: PrabuBeneishAnalysis
-    common_financial_ratios: PrabuCommonRatios # Diubah dari Any ke PrabuCommonRatios
-    credit_risk_prediction: PrabuCreditRiskPrediction
+    common_financial_ratios: PrabuCommonRatios 
+    # credit_risk_prediction_rule_based: Optional[PrabuCreditRiskPrediction] = None # Jika ingin mempertahankan yang lama
+    credit_risk_prediction: PrabuMLCreditRiskPrediction # Mengganti dengan prediksi ML
     error: Optional[str] = Field(None, description="Pesan error global dari keseluruhan analisis Prabu")
 
 # Untuk Sarana, inputnya adalah UploadFile, jadi tidak perlu model Pydantic khusus untuk input file.
@@ -126,8 +134,9 @@ class SetiaRiskIntelligenceResponse(BaseModel):
 
 # Tambahkan __all__ untuk kontrol impor jika diperlukan
 __all__ = [
-    "FinancialDataInput", "PrabuAnalysisRequest", "PrabuAnalysisResponse", 
-    "PrabuRatios", "PrabuAltmanAnalysis", "PrabuBeneishAnalysis", "PrabuCommonRatios", "PrabuCreditRiskPrediction",
-    "SaranaKeywordExtraction", "SaranaParseDocumentResponse", 
+    "FinancialDataInput", "PrabuAnalysisRequest", "PrabuAnalysisResponse",
+    "PrabuRatios", "PrabuAltmanAnalysis", "PrabuBeneishAnalysis", "PrabuCommonRatios",
+    "PrabuCreditRiskPrediction", "PrabuMLCreditRiskPrediction", # Menambahkan PrabuMLCreditRiskPrediction
+    "SaranaKeywordExtraction", "SaranaParseDocumentResponse",
     "SetiaRiskIntelligenceRequest", "SetiaSupportingSource", "SetiaRiskIntelligenceResponse"
 ]

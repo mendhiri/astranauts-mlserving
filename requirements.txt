@@ -2,6 +2,8 @@ fastapi
 google-cloud-storage
 google-cloud-aiplatform
 ipython
+importlib
+joblib
 langchain
 langchain-ollama
 matplotlib

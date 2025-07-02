@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 
 try:
-    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, credit_risk_predictor
+    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, credit_risk_predictor, ml_credit_risk_predictor
 except ImportError:
     # Fallback jika PrabuModule dianggap sebagai bagian dari 'app' (misalnya app.PrabuModule)
     # atau jika sys.path dimodifikasi untuk menyertakan root.
@@ -21,7 +21,7 @@ except ImportError:
         sys.path.insert(0, project_root)
     
     # Sekarang coba impor lagi
-    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, credit_risk_predictor
+    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, credit_risk_predictor, ml_credit_risk_predictor
 
 # --- END Penyesuaian Impor ---
 
@@ -107,7 +107,8 @@ def run_prabu_analysis(
     data_t_minus_1: Optional[Dict[str, Any]] = None,
     is_public_company: bool = True,
     market_value_equity_manual: Optional[float] = None,
-    altman_model_type_override: Optional[str] = None # e.g., "public_manufacturing", "private_manufacturing", "non_manufacturing_or_emerging_markets"
+    altman_model_type_override: Optional[str] = None, # e.g., "public_manufacturing", "private_manufacturing", "non_manufacturing_or_emerging_markets"
+    sector: Optional[str] = None # Tambahkan parameter sector
 ) -> Dict[str, Any]:
     """
     Menjalankan analisis keuangan lengkap menggunakan modul Prabu.
@@ -118,6 +119,7 @@ def run_prabu_analysis(
         is_public_company (bool): Status perusahaan (publik/privat).
         market_value_equity_manual (float, optional): Nilai pasar ekuitas manual.
         altman_model_type_override (str, optional): Override tipe model Altman Z-Score.
+        sector (str, optional): Sektor industri perusahaan.
 
     Returns:
         dict: Hasil analisis yang terstruktur, siap untuk PrabuAnalysisResponse.
@@ -131,7 +133,7 @@ def run_prabu_analysis(
     altman_result = {}
     beneish_result = {}
     common_ratios_result = {}
-    credit_risk_pred_result = {}
+    ml_credit_risk_pred_result = {} # Ganti nama untuk hasil prediksi ML
     
     # 1. Analisis Altman Z-Score
     # Tentukan model_type untuk Altman Z-Score
@@ -273,42 +275,45 @@ def run_prabu_analysis(
     else:
         common_ratios_result = {"error": "Gagal menghitung rasio keuangan komprehensif."}
 
-
-    # 4. Prediksi Risiko Kredit
-    # Menggunakan skor Altman dan Beneish yang sudah dihitung
-    altman_score_for_pred = altman_result.get("z_score")
-    beneish_score_for_pred = beneish_result.get("m_score")
-    
-    # Tentukan altman_is_public untuk predict_credit_risk_v2
-    # Ini harus konsisten dengan model yang digunakan untuk menghitung altman_score_for_pred.
-    altman_model_used_for_pred = altman_result.get("model_used", "")
-    is_public_for_pred = True # Default
-    if altman_model_used_for_pred == "private_manufacturing":
-        is_public_for_pred = False
-    # Jika 'non_manufacturing_or_emerging_markets', juga dianggap 'public' dalam konteks parameter ini.
-    
-    credit_pred = credit_risk_predictor.predict_credit_risk_v2(
-        financial_data_t=norm_data_t, # Data yang sudah dinormalisasi
-        financial_data_t_minus_1=norm_data_t_minus_1, # Data yang sudah dinormalisasi
-        beneish_score_input=beneish_score_for_pred,
-        altman_z_score_input=altman_score_for_pred,
-        altman_is_public=is_public_for_pred
-    )
-    credit_risk_pred_result = {
-        "credit_risk_score": credit_pred.get("credit_risk_score"),
-        "risk_category": credit_pred.get("risk_category"),
-        "underlying_ratios": credit_pred.get("underlying_ratios"), # Ini adalah dict {nama_rasio: nilai}
-        "altman_z_score_used": credit_pred.get("altman_z_score_used"),
-        "beneish_m_score_used": credit_pred.get("beneish_m_score_used"),
-        "error": credit_pred.get("error") # Jika ada error dari predictor
-    }
+    # 4. Prediksi Risiko Kredit menggunakan Model ML
+    if not sector:
+        ml_credit_risk_pred_result = {
+            "risk_category": None,
+            "probabilities": None,
+            "error": "Sektor tidak disediakan, prediksi ML tidak dapat dilakukan."
+        }
+    else:
+        # Data input untuk prediksi ML adalah dictionary fitur keuangan.
+        # ml_credit_risk_predictor.predict_credit_risk_ml mengharapkan dict fitur mentah.
+        # Kita bisa menggunakan comprehensive_ratios yang sudah dihitung, atau norm_data_t
+        # Tergantung bagaimana model ML dilatih. Jika dilatih pada rasio, gunakan comprehensive_ratios.
+        # Jika dilatih pada data mentah yang kemudian di-preprocess, gunakan norm_data_t.
+        # Berdasarkan incremental_model_trainer.py, model dilatih pada fitur-fitur yang ada di dataset CSV,
+        # yang merupakan rasio dan fitur spesifik sektor, bukan item laporan keuangan mentah.
+        # Jadi, kita perlu memastikan `comprehensive_ratios` (atau subsetnya yang relevan) diteruskan.
+        # Fungsi `ml_credit_risk_predictor.predict_credit_risk_ml` sudah mengharapkan dict fitur.
+        
+        # `comprehensive_ratios` sudah merupakan dict fitur yang bisa langsung dipakai.
+        # Ini juga mencakup fitur-fitur umum yang ada di GENERAL_FEATURES dari trainer.
+        # Fitur spesifik sektor perlu ditambahkan ke dict ini jika belum ada.
+        # Namun, `ml_credit_risk_predictor.py` akan menangani penambahan fitur yang tidak ada dengan NaN.
+        # Jadi, kita bisa langsung pass `norm_data_t` yang berisi semua item keuangan mentah,
+        # karena `ml_credit_risk_predictor.py` akan melakukan pra-pemrosesan (termasuk perhitungan rasio jika perlu, atau penggunaan fitur mentah).
+        # Revisi: `ml_credit_risk_predictor` dan `incremental_model_trainer` menggunakan fitur-fitur yang sudah dihitung (rasio, dll)
+        # Jadi, kita harus mengirimkan dict yang berisi nama fitur yang sama dengan yang digunakan saat pelatihan.
+        # `comprehensive_ratios` adalah kandidat yang baik jika ingin menggunakan rasio saja.
+        # Namun, untuk fleksibilitas fitur sektor, `norm_data_t` (yang berisi semua data mentah dari request) lebih cocok
+        # karena `ml_credit_risk_predictor` akan melakukan seleksi/pemrosesan fitur yang diperlukan.
+        
+        ml_pred_result = ml_credit_risk_predictor.predict_credit_risk_ml(financial_data_dict=norm_data_t, sector=sector)
+        ml_credit_risk_pred_result = ml_pred_result # Hasilnya sudah dict yang sesuai
     
     # Gabungkan semua hasil
     final_result = {
         "altman_z_score_analysis": altman_result,
         "beneish_m_score_analysis": beneish_result,
         "common_financial_ratios": common_ratios_result, # Ini adalah dict rasio
-        "credit_risk_prediction": credit_risk_pred_result
+        "credit_risk_prediction": ml_credit_risk_pred_result # Menggunakan hasil prediksi ML
     }
     
     # Cek apakah ada error global yang perlu di-propagate jika salah satu komponen utama gagal
@@ -316,7 +321,9 @@ def run_prabu_analysis(
         final_result["error"] = f"Analisis Altman Z-Score gagal: {altman_result['error']}"
     elif beneish_result.get("error") and not beneish_result.get("m_score") and norm_data_t_minus_1: # Jika Beneish gagal dan seharusnya bisa dihitung
         final_result["error"] = f"Analisis Beneish M-Score gagal: {beneish_result['error']}"
-    # Error dari common_ratios dan credit_risk_prediction akan ada di dalam field 'error' masing-masing.
+    elif ml_credit_risk_pred_result.get("error") and not ml_credit_risk_pred_result.get("risk_category"):
+        final_result["error"] = f"Prediksi Risiko Kredit ML gagal: {ml_credit_risk_pred_result['error']}"
+    # Error dari common_ratios akan ada di dalam field 'error' masing-masing.
 
     return final_result
 
@@ -370,7 +377,8 @@ if __name__ == '__main__':
     analysis1 = run_prabu_analysis(
         data_t=sample_data_t,
         data_t_minus_1=sample_data_t_minus_1,
-        is_public_company=True
+        is_public_company=True,
+        sector="Pertambangan" # Tambahkan sektor
     )
     import json
     print("\nHasil Analisis Skenario 1 (Publik, default):")
@@ -380,7 +388,8 @@ if __name__ == '__main__':
     analysis2 = run_prabu_analysis(
         data_t=sample_data_t,
         data_t_minus_1=sample_data_t_minus_1,
-        is_public_company=False # Ini akan memicu model Altman untuk private manufacturing
+        is_public_company=False, # Ini akan memicu model Altman untuk private manufacturing
+        sector="Konstruksi" # Tambahkan sektor
     )
     print("\nHasil Analisis Skenario 2 (Privat):")
     print(json.dumps(analysis2, indent=2, ensure_ascii=False))
@@ -390,7 +399,8 @@ if __name__ == '__main__':
         data_t=sample_data_t,
         data_t_minus_1=sample_data_t_minus_1,
         is_public_company=True,
-        market_value_equity_manual=90000000000000.0 # Contoh MVE
+        market_value_equity_manual=90000000000000.0, # Contoh MVE
+        sector="Agro" # Tambahkan sektor
     )
     print("\nHasil Analisis Skenario 3 (Publik, MVE Manual):")
     print(json.dumps(analysis3, indent=2, ensure_ascii=False))
@@ -400,7 +410,8 @@ if __name__ == '__main__':
         data_t=sample_data_t,
         data_t_minus_1=sample_data_t_minus_1,
         is_public_company=True, # Tidak terlalu relevan jika model di-override
-        altman_model_type_override="non_manufacturing_or_emerging_markets"
+        altman_model_type_override="non_manufacturing_or_emerging_markets",
+        sector="Manufaktur Alat Berat" # Tambahkan sektor
     )
     print("\nHasil Analisis Skenario 4 (Override Altman ke Non-Manufacturing):")
     print(json.dumps(analysis4, indent=2, ensure_ascii=False))
@@ -409,7 +420,8 @@ if __name__ == '__main__':
     analysis5 = run_prabu_analysis(
         data_t=sample_data_t,
         data_t_minus_1=None,
-        is_public_company=True
+        is_public_company=True,
+        sector="Logistik Alat Berat" # Tambahkan sektor
     )
     print("\nHasil Analisis Skenario 5 (Tanpa Data t-1):")
     print(json.dumps(analysis5, indent=2, ensure_ascii=False))
@@ -420,7 +432,8 @@ if __name__ == '__main__':
     analysis6 = run_prabu_analysis(
         data_t=sample_data_t_incomplete,
         data_t_minus_1=sample_data_t_minus_1,
-        is_public_company=True
+        is_public_company=True,
+        sector="Pertambangan" # Tambahkan sektor
     )
     print("\nHasil Analisis Skenario 6 (Data t Tidak Lengkap):")
     print(json.dumps(analysis6, indent=2, ensure_ascii=False))
@@ -429,7 +442,8 @@ if __name__ == '__main__':
     # Skenario 7: Data t kosong
     analysis7 = run_prabu_analysis(
         data_t={},
-        is_public_company=True
+        is_public_company=True,
+        sector="Tidak Diketahui" # Sektor tidak valid/kosong
     )
     print("\nHasil Analisis Skenario 7 (Data t Kosong):")
     print(json.dumps(analysis7, indent=2, ensure_ascii=False))

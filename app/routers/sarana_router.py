@@ -27,6 +27,7 @@ async def parse_document_endpoint(
     ocr_engine: str = Form('tesseract', description="Mesin OCR untuk gambar/PDF: 'tesseract', 'easyocr', 'ollama'."),
     pdf_parsing_method: str = Form('pymupdf', description="Metode parsing PDF: 'pymupdf', 'pdfplumber'."),
     output_format: str = Form('text', description="Format output: 'text' atau 'structured_json' (structured_json hanya untuk gambar via ollama)."),
+    jenis_pengaju: str = Form('korporat', description="Jenis pengaju: 'korporat' atau 'individu'."),
     # Parameter tambahan untuk Ollama jika output_format='structured_json' untuk gambar
     ollama_json_prompt_template: Optional[str] = Form(None, description="Template prompt JSON kustom untuk Ollama (jika output structured_json dari gambar)."),
     ollama_vision_model_name: str = Form("llama3.2-vision", description="Model vision Ollama."),
@@ -56,6 +57,7 @@ async def parse_document_endpoint(
             ocr_engine_for_images_and_pdf=ocr_engine,
             pdf_parsing_method=pdf_parsing_method,
             output_format=output_format,
+            jenis_pengaju=jenis_pengaju, # Teruskan parameter jenis_pengaju
             ollama_prompt_for_json_extraction=ollama_json_prompt_template,
             ollama_vision_model=ollama_vision_model_name,
             ollama_llm_model_for_json=ollama_llm_model_json_name,
