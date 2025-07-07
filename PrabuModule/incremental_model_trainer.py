@@ -175,7 +175,7 @@ def train_initial_model(df_initial_data, force_retrain_preprocessor=False, force
 
     # Prepare data for CatBoost: Apply numeric preprocessing, keep categorical as is (CatBoost handles them)
     X_processed_numeric = pd.DataFrame(numeric_preprocessor.transform(X[numeric_features_for_model]), columns=numeric_features_for_model, index=X.index)
-    X_final_for_model = pd.concat([X_processed_numeric, X[categorical_features_for_model].reset_index(drop=True)], axis=1)
+    X_final_for_model = pd.concat([X_processed_numeric, X[categorical_features_for_model]], axis=1)
     
     # CatBoost needs to know which features are categorical by their names or indices in X_final_for_model
     cat_feature_indices = [X_final_for_model.columns.get_loc(col) for col in categorical_features_for_model]
@@ -252,7 +252,7 @@ def update_model_incrementally(df_new_data, existing_model_path=None, preprocess
     categorical_features_for_model = [col for col in CATEGORICAL_FEATURES if col in X_new.columns]
 
     X_new_processed_numeric = pd.DataFrame(preprocessor.transform(X_new[numeric_features_for_model]), columns=numeric_features_for_model, index=X_new.index)
-    X_new_final_for_model = pd.concat([X_new_processed_numeric, X_new[categorical_features_for_model].reset_index(drop=True)], axis=1)
+    X_new_final_for_model = pd.concat([X_new_processed_numeric, X_new[categorical_features_for_model]], axis=1)
 
     cat_feature_indices = [X_new_final_for_model.columns.get_loc(col) for col in categorical_features_for_model]
 
@@ -340,19 +340,22 @@ def predict_risk(data_input_dict, model_path=MODEL_PATH, preprocessor_path=PREPR
     
     # Categorical features for the model
     categorical_features_for_model = [col for col in CATEGORICAL_FEATURES if col in df_input.columns]
-    df_input_final = pd.concat([df_input_numeric_processed, df_input[categorical_features_for_model].reset_index(drop=True)], axis=1)
+    # Ensure consistent index handling, similar to training and update functions
+    df_input_final = pd.concat([df_input_numeric_processed, df_input[categorical_features_for_model]], axis=1)
     
-    # Ensure column order matches training if CatBoost is sensitive (usually not if using feature names)
-    # For `cat_features` indices, they are based on X_final_for_model during training.
-    # So, the order of columns in df_input_final should ideally match that.
-    # However, CatBoost `predict` can often handle DataFrames with feature names directly.
-    
-    # Get categorical feature indices for prediction time based on df_input_final columns
-    cat_feature_indices_pred = [df_input_final.columns.get_loc(col) for col in categorical_features_for_model if col in df_input_final.columns]
+    # Ensure column order matches training data structure (numeric followed by categorical)
+    # The model expects columns in the same order as during training.
+    # If df_input_final is constructed consistently with X_final_for_model 
+    # (numeric_features_for_model then categorical_features_for_model), this should be fine.
+    # CatBoost generally handles DataFrames by column names if they were used in training Pool,
+    # but relying on consistent order from construction is safer.
 
+    # The `cat_features` argument is not needed for predict/predict_proba when
+    # the model is already trained and aware of categorical features,
+    # and input is a DataFrame with correct column names and types.
     try:
-        prediction_encoded = model.predict(df_input_final, cat_features=cat_feature_indices_pred)
-        proba = model.predict_proba(df_input_final, cat_features=cat_feature_indices_pred)
+        prediction_encoded = model.predict(df_input_final)
+        proba = model.predict_proba(df_input_final)
         
         # Prediction is likely [[index]], flatten and convert to int for label_encoder
         predicted_label = label_encoder.inverse_transform(prediction_encoded.astype(int).flatten())[0]
