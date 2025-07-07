@@ -20,7 +20,13 @@
       "Perikanan & Akuakultur": "Menengah",
       "Kehutanan": "Tinggi"
     },
-    "Properti & Konstruksi": {
+    "Konstruksi": {
+      "Pengembang Properti Residensial": "Menengah",
+      "Properti Komersial & Industri": "Menengah ke Tinggi",
+      "Konstruksi Infrastruktur": "Menengah",
+      "Semen & Material Bangunan": "Menengah"
+    },
+    "Properti": {
       "Pengembang Properti Residensial": "Menengah",
       "Properti Komersial & Industri": "Menengah ke Tinggi",
       "Konstruksi Infrastruktur": "Menengah",

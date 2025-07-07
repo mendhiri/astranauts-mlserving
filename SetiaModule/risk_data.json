@@ -1,13 +1,4 @@
 {
-  "risiko_negara": {
-    "Indonesia": "Menengah",
-    "Singapura": "Rendah",
-    "Malaysia": "Rendah",
-    "Vietnam": "Menengah",
-    "Thailand": "Menengah",
-    "Filipina": "Menengah ke Tinggi",
-    "Myanmar": "Sangat Tinggi"
-  },
   "risiko_industri": {
     "Keuangan": {
       "Perbankan (BUKU IV/III)": "Rendah",
@@ -29,7 +20,13 @@
       "Perikanan & Akuakultur": "Menengah",
       "Kehutanan": "Tinggi"
     },
-    "Properti & Konstruksi": {
+    "Konstruksi": {
+      "Pengembang Properti Residensial": "Menengah",
+      "Properti Komersial & Industri": "Menengah ke Tinggi",
+      "Infrastruktur": "Menengah",
+      "Semen & Material Bangunan": "Menengah"
+    },
+    "Properti": {
       "Pengembang Properti Residensial": "Menengah",
       "Properti Komersial & Industri": "Menengah ke Tinggi",
       "Konstruksi Infrastruktur": "Menengah",

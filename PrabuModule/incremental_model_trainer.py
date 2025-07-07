@@ -247,6 +247,23 @@ def update_model_incrementally(df_new_data, existing_model_path=None, preprocess
         # Option: ignore new data with unknown classes for this update.
         return joblib.load(existing_model_path) if existing_model_path and os.path.exists(existing_model_path) else None
 
+    # Periksa jumlah nilai unik di y_new_encoded
+    if len(np.unique(y_new_encoded)) < 2:
+        print("Peringatan: Data target baru hanya memiliki satu nilai unik setelah encoding.")
+        print("Model tidak akan diperbarui dengan data ini untuk menghindari error CatBoost.")
+        # Mengembalikan model yang ada jika ada, atau None jika tidak ada model awal
+        if existing_model_path and os.path.exists(existing_model_path):
+            try:
+                existing_model = CatBoostClassifier()
+                existing_model.load_model(existing_model_path)
+                print(f"Mengembalikan model yang sudah ada dari: {existing_model_path}")
+                return existing_model
+            except Exception as e_load:
+                print(f"Gagal memuat model yang ada dari {existing_model_path}: {e_load}")
+                return None
+        else:
+            print("Tidak ada model awal yang valid untuk dikembalikan.")
+            return None
 
     numeric_features_for_model = [col for col in ALL_NUMERIC_FEATURES if col in X_new.columns]
     categorical_features_for_model = [col for col in CATEGORICAL_FEATURES if col in X_new.columns]

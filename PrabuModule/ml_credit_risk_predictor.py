@@ -129,11 +129,14 @@ def predict_credit_risk_ml(financial_data_dict: dict, sector: str) -> dict:
     
     # CatBoost needs to know which features are categorical by their names or indices
     # These indices are relative to the columns in df_final_for_model
-    cat_feature_indices_pred = [df_final_for_model.columns.get_loc(col) for col in categorical_features_for_model if col in df_final_for_model.columns]
+    # cat_feature_indices_pred = [df_final_for_model.columns.get_loc(col) for col in categorical_features_for_model if col in df_final_for_model.columns] # Not needed for predict if model knows cat features
 
     try:
-        prediction_encoded = MODEL.predict(df_final_for_model, cat_features=cat_feature_indices_pred)
-        probabilities_array = MODEL.predict_proba(df_final_for_model, cat_features=cat_feature_indices_pred)
+        # When predicting with a trained CatBoost model on a Pandas DataFrame,
+        # you usually don't need to pass cat_features if the DataFrame has correct column names and dtypes,
+        # and the model was trained with feature names. CatBoost will identify them.
+        prediction_encoded = MODEL.predict(df_final_for_model)
+        probabilities_array = MODEL.predict_proba(df_final_for_model)
         
         # Prediction_encoded is likely [[index]], flatten and convert to int for label_encoder
         predicted_category_label = LABEL_ENCODER.inverse_transform(prediction_encoded.astype(int).flatten())[0]
