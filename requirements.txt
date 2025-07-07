@@ -1,4 +1,5 @@
 catboost
+easyocr
 fastapi
 google-auth
 google-auth-oauthlib
@@ -15,8 +16,7 @@ matplotlib
 nltk
 numpy
 ollama
-opencv_python
-opencv_python_headless
+opencv-python-headless
 openpyxl
 pandas
 pdfplumber
@@ -24,9 +24,11 @@ Pillow
 protobuf
 pydantic
 pymupdf
+pyocr
 pytesseract
 python-dotenv
 python_docx
 python-multipart
+scikit-learn
 uvicorn
 vertexai

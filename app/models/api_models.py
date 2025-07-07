@@ -76,6 +76,7 @@ class PrabuCreditRiskPrediction(BaseModel):
 class PrabuMLCreditRiskPrediction(BaseModel):
     """Hasil prediksi risiko kredit menggunakan model Machine Learning."""
     risk_category: Optional[str] = Field(None, description="Kategori risiko hasil prediksi ML (Low, Medium, High)")
+    risk_score: Optional[float] = Field(None, description="Skor risiko numerik yang dihasilkan dari kategori (misal, Low=20, Medium=50, High=80)")
     probabilities: Optional[Dict[str, float]] = Field(None, description="Probabilitas untuk setiap kategori risiko")
     error: Optional[str] = Field(None, description="Pesan error jika prediksi risiko kredit ML gagal")
 
