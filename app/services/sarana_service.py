@@ -951,6 +951,58 @@ def parse_financial_document(
         
     return result
 
+# Wrapper function for API router compatibility
+def parse_document_sarana(
+    file_path: str,
+    file_type: str | None = None,
+    ocr_engine: str = 'tesseract',
+    pdf_parsing_method: str = 'pymupdf',
+    output_format: str = 'text',
+    jenis_pengaju: str = 'korporat',
+    ollama_json_prompt_template: str | None = None,
+    ollama_vision_model_name: str = "llama3.2-vision",
+    ollama_llm_model_json_name: str = "llama3",
+    ollama_api_base_url_param: str | None = None
+) -> dict:
+    """
+    Wrapper function untuk parse_financial_document yang kompatibel dengan router API.
+    
+    Args:
+        file_path: Path ke file yang akan diparse
+        file_type: Tipe file eksplisit
+        ocr_engine: Mesin OCR yang digunakan
+        pdf_parsing_method: Metode parsing PDF
+        output_format: Format output ('text' atau 'structured_json')
+        jenis_pengaju: Jenis pengaju ('korporat' atau 'individu')
+        ollama_json_prompt_template: Template prompt JSON untuk Ollama
+        ollama_vision_model_name: Nama model vision Ollama
+        ollama_llm_model_json_name: Nama model LLM Ollama
+        ollama_api_base_url_param: Base URL API Ollama
+    
+    Returns:
+        Dictionary dengan hasil parsing
+    """
+    try:
+        return parse_financial_document(
+            file_path=file_path,
+            file_type=file_type,
+            ocr_engine_for_images_and_pdf=ocr_engine,
+            pdf_parsing_method=pdf_parsing_method,
+            output_format=output_format,
+            jenis_pengaju=jenis_pengaju,
+            ollama_prompt_for_json_extraction=ollama_json_prompt_template,
+            ollama_vision_model=ollama_vision_model_name,
+            ollama_llm_model_for_json=ollama_llm_model_json_name,
+            ollama_api_base_url=ollama_api_base_url_param
+        )
+    except Exception as e:
+        return {
+            "error": f"Error in parse_document_sarana: {str(e)}",
+            "file_name": os.path.basename(file_path) if file_path else "unknown",
+            "extracted_text": "",
+            "processing_time_seconds": 0
+        }
+
 if __name__ == '__main__':
     print("--- Contoh Penggunaan Sarana Service (parse_financial_document) ---")
     # Buat file dummy untuk diuji
@@ -1069,4 +1121,3 @@ if __name__ == '__main__':
         print(f"Error saat membersihkan file dummy: {e_clean}")
 
     print("\n--- Contoh Penggunaan Sarana Service Selesai ---")
-    

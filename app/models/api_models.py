@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, List
 import datetime
 
-
 class FinancialDataInput(BaseModel):
     """
     Model untuk input data keuangan per periode.
