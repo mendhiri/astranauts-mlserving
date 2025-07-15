@@ -7,8 +7,14 @@ from ..models.api_models import PrabuAnalysisRequest, PrabuAnalysisResponse
 
 router = APIRouter()
 
-@router.post("/analyze", summary="Analisis Risiko Keuangan Prabu", response_model=PrabuAnalysisResponse)
-async def analyze_financial_data(
+# Health check endpoint
+@router.get("/health", summary="Prabu Health Check")
+async def prabu_health_check():
+    """Health check untuk module Prabu"""
+    return {"status": "ok", "module": "Prabu", "message": "Credit scoring module is running"}
+
+@router.post("/calculate", summary="Comprehensive Financial Analysis", response_model=PrabuAnalysisResponse)
+async def calculate_comprehensive_score(
     request_data: PrabuAnalysisRequest
 ):
     """
@@ -25,29 +31,109 @@ async def analyze_financial_data(
             is_public_company=request_data.is_public_company,
             market_value_equity_manual=request_data.market_value_equity_manual,
             altman_model_type_override=request_data.altman_model_type_override,
-            sector=request_data.sector # Tambahkan sector
+            sector=request_data.sector
         )
         
-        # Jika layanan Prabu mengembalikan dictionary yang mengandung 'error' di level atas,
-        # ini menandakan masalah pada keseluruhan proses analisis di layanan.
         if analysis_result_dict.get("error"):
-            # Kita bisa memilih untuk mengembalikan HTTP 500 atau 422 tergantung sifat errornya.
-            # Jika error karena input tidak valid setelah validasi Pydantic (seharusnya tidak terjadi di sini), itu 422.
-            # Jika error karena proses internal di layanan, 500 lebih cocok.
             raise HTTPException(status_code=500, detail=f"Kesalahan pada layanan Prabu: {analysis_result_dict['error']}")
 
-        # Konversi hasil dictionary ke model Pydantic PrabuAnalysisResponse
-        # Ini juga akan memvalidasi apakah output dari service sesuai dengan skema response.
-        # Pydantic akan mencoba mencocokkan field berdasarkan nama.
-        # Perlu dipastikan bahwa keys dalam analysis_result_dict cocok dengan field di PrabuAnalysisResponse
-        # dan sub-modelnya (PrabuAltmanAnalysis, dll.)
-        # Jika ada error parsial (misal, Altman error tapi Beneish OK), ini akan ditangani di dalam sub-model.
         return PrabuAnalysisResponse(**analysis_result_dict)
 
-    except HTTPException as http_exc: # Re-raise HTTPException yang sudah ada
+    except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
-        # Tangani error tak terduga lainnya
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/altman-z", summary="Altman Z-Score Analysis")
+async def calculate_altman_z_score(
+    request_data: PrabuAnalysisRequest
+):
+    """
+    Endpoint khusus untuk menghitung Altman Z-Score saja.
+    """
+    try:
+        # Extract only Altman Z analysis
+        analysis_result = prabu_service.run_prabu_analysis(
+            data_t=request_data.data_t,
+            data_t_minus_1=request_data.data_t_minus_1,
+            is_public_company=request_data.is_public_company,
+            market_value_equity_manual=request_data.market_value_equity_manual,
+            altman_model_type_override=request_data.altman_model_type_override,
+            sector=request_data.sector
+        )
+        
+        if analysis_result.get("error"):
+            raise HTTPException(status_code=500, detail=f"Error: {analysis_result['error']}")
+            
+        # Return only Altman Z analysis
+        return {
+            "altman_analysis": analysis_result.get("altman_analysis"),
+            "applicant_name": analysis_result.get("applicant_name"),
+            "timestamp": analysis_result.get("timestamp")
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/m-score", summary="Beneish M-Score Analysis")
+async def calculate_beneish_m_score(
+    request_data: PrabuAnalysisRequest
+):
+    """
+    Endpoint khusus untuk menghitung Beneish M-Score saja.
+    """
+    try:
+        analysis_result = prabu_service.run_prabu_analysis(
+            data_t=request_data.data_t,
+            data_t_minus_1=request_data.data_t_minus_1,
+            is_public_company=request_data.is_public_company,
+            market_value_equity_manual=request_data.market_value_equity_manual,
+            altman_model_type_override=request_data.altman_model_type_override,
+            sector=request_data.sector
+        )
+        
+        if analysis_result.get("error"):
+            raise HTTPException(status_code=500, detail=f"Error: {analysis_result['error']}")
+            
+        # Return only Beneish M analysis
+        return {
+            "beneish_analysis": analysis_result.get("beneish_analysis"),
+            "applicant_name": analysis_result.get("applicant_name"),
+            "timestamp": analysis_result.get("timestamp")
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/metrics", summary="Financial Ratios and Metrics")
+async def calculate_financial_metrics(
+    request_data: PrabuAnalysisRequest
+):
+    """
+    Endpoint khusus untuk menghitung rasio keuangan dan metrik saja.
+    """
+    try:
+        analysis_result = prabu_service.run_prabu_analysis(
+            data_t=request_data.data_t,
+            data_t_minus_1=request_data.data_t_minus_1,
+            is_public_company=request_data.is_public_company,
+            market_value_equity_manual=request_data.market_value_equity_manual,
+            altman_model_type_override=request_data.altman_model_type_override,
+            sector=request_data.sector
+        )
+        
+        if analysis_result.get("error"):
+            raise HTTPException(status_code=500, detail=f"Error: {analysis_result['error']}")
+            
+        # Return only financial ratios
+        return {
+            "financial_ratios": analysis_result.get("financial_ratios"),
+            "applicant_name": analysis_result.get("applicant_name"),
+            "timestamp": analysis_result.get("timestamp")
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
         # print(f"ERROR in Prabu router: {type(e).__name__} - {e}") # Untuk logging di server
         raise HTTPException(status_code=500, detail=f"Terjadi kesalahan internal yang tidak terduga saat analisis Prabu: {str(e)}")
 

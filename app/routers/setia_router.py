@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, Any, Optional
-import os # Diperlukan untuk os.environ.get
+import os
 
 # Impor layanan Setia dan model Pydantic
 from ..services import setia_service
@@ -8,23 +8,25 @@ from ..models.api_models import SetiaRiskIntelligenceRequest, SetiaRiskIntellige
 
 router = APIRouter()
 
-@router.post("/risk-intelligence", summary="Analisis Intelijen Risiko Setia", response_model=SetiaRiskIntelligenceResponse)
-async def get_risk_intelligence_endpoint(
+# Health check endpoint
+@router.get("/health", summary="Setia Health Check")
+async def setia_health_check():
+    """Health check untuk module Setia"""
+    return {"status": "ok", "module": "Setia", "message": "Sentiment analysis module is running"}
+
+@router.post("/sentiment", summary="Sentiment Analysis", response_model=SetiaRiskIntelligenceResponse)
+async def sentiment_analysis_endpoint(
     request_data: SetiaRiskIntelligenceRequest
 ):
     """
-    Endpoint untuk mendapatkan analisis intelijen risiko menggunakan modul Setia.
-    Menggabungkan analisis berita terkini (grounded AI) dengan data risiko industri.
-
-    Menerima parameter dalam body request sesuai model `SetiaRiskIntelligenceRequest`.
+    Endpoint untuk analisis sentimen menggunakan modul Setia.
+    Menggabungkan analisis berita terkini dengan data risiko industri.
     """
     actual_gcs_bucket_name = None
     if request_data.use_gcs_for_risk_data:
         actual_gcs_bucket_name = request_data.gcs_bucket_name_override or os.environ.get("SETIA_RISK_DATA_BUCKET_NAME")
-        # Layanan Setia akan menangani jika actual_gcs_bucket_name tetap None meskipun use_gcs_for_risk_data True.
 
     try:
-        # Panggil fungsi utama dari layanan Setia
         analysis_result_dict = setia_service.get_setia_risk_intelligence(
             applicant_name=request_data.applicant_name,
             industry_main=request_data.industry_main,
@@ -33,21 +35,76 @@ async def get_risk_intelligence_endpoint(
             gcs_bucket_name=actual_gcs_bucket_name
         )
 
-        # Periksa apakah layanan mengembalikan error spesifik yang ingin kita tangani sebagai HTTP error
         if analysis_result_dict.get("error"):
-            # Contoh: Jika error karena Vertex AI tidak tersedia atau masalah konfigurasi GCS
-            # Kita bisa menggunakan status kode yang berbeda tergantung jenis errornya.
-            # 503 Service Unavailable jika layanan eksternal tidak siap.
-            # 422 Unprocessable Entity jika input valid tapi tidak bisa diproses karena kondisi tertentu.
             raise HTTPException(status_code=503, detail=f"Kesalahan pada layanan Setia: {analysis_result_dict['error']}")
             
-        # Konversi hasil dictionary ke model Pydantic SetiaRiskIntelligenceResponse
         return SetiaRiskIntelligenceResponse(**analysis_result_dict)
         
-    except HTTPException as http_exc: # Re-raise HTTPException yang sudah ada
+    except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
-        # Tangani error tak terduga lainnya
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/news", summary="News Monitoring and Analysis")
+async def news_monitoring_endpoint(
+    request_data: SetiaRiskIntelligenceRequest
+):
+    """
+    Endpoint khusus untuk monitoring dan analisis berita.
+    """
+    try:
+        analysis_result = setia_service.get_setia_risk_intelligence(
+            applicant_name=request_data.applicant_name,
+            industry_main=request_data.industry_main,
+            industry_sub=request_data.industry_sub,
+            use_gcs_for_risk_data=False  # Focus only on news analysis
+        )
+
+        if analysis_result.get("error"):
+            raise HTTPException(status_code=503, detail=f"Error: {analysis_result['error']}")
+            
+        # Return only news-related data
+        return {
+            "applicant_name": analysis_result.get("applicantName"),
+            "grounded_summary": analysis_result.get("groundedSummary"),
+            "overall_sentiment": analysis_result.get("overallSentiment"),
+            "key_issues": analysis_result.get("keyIssues"),
+            "supporting_sources": analysis_result.get("supportingSources"),
+            "analysis_timestamp": analysis_result.get("analysisTimestamp")
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"News analysis error: {str(e)}")
+
+@router.post("/external-risk", summary="External Risk Assessment")
+async def external_risk_assessment_endpoint(
+    request_data: SetiaRiskIntelligenceRequest
+):
+    """
+    Endpoint untuk penilaian risiko eksternal berdasarkan data industri.
+    """
+    try:
+        analysis_result = setia_service.get_setia_risk_intelligence(
+            applicant_name=request_data.applicant_name,
+            industry_main=request_data.industry_main,
+            industry_sub=request_data.industry_sub,
+            use_gcs_for_risk_data=request_data.use_gcs_for_risk_data,
+            gcs_bucket_name=request_data.gcs_bucket_name_override or os.environ.get("SETIA_RISK_DATA_BUCKET_NAME")
+        )
+
+        if analysis_result.get("error"):
+            raise HTTPException(status_code=503, detail=f"Error: {analysis_result['error']}")
+            
+        # Return only external risk data
+        return {
+            "applicant_name": analysis_result.get("applicantName"),
+            "industry_sector_outlook": analysis_result.get("industrySectorOutlook"),
+            "overall_sentiment": analysis_result.get("overallSentiment"),
+            "analysis_timestamp": analysis_result.get("analysisTimestamp")
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"External risk assessment error: {str(e)}")
         # print(f"ERROR in Setia router (/risk-intelligence): {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail=f"Terjadi kesalahan internal yang tidak terduga saat analisis Setia: {str(e)}")
 

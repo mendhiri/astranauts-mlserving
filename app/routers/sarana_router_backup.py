@@ -159,3 +159,45 @@ async def extract_data_endpoint(
     finally:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+            shutil.copyfileobj(file.file, buffer)
+
+        # Panggil layanan Sarana dengan path file temporer
+        parsed_result_dict = sarana_service.parse_financial_document(
+            file_path=temp_file_path,
+            file_type=file_type,
+            ocr_engine_for_images_and_pdf=ocr_engine,
+            pdf_parsing_method=pdf_parsing_method,
+            output_format=output_format,
+            jenis_pengaju=jenis_pengaju, # Teruskan parameter jenis_pengaju
+            ollama_prompt_for_json_extraction=ollama_json_prompt_template,
+            ollama_vision_model=ollama_vision_model_name,
+            ollama_llm_model_for_json=ollama_llm_model_json_name,
+            ollama_api_base_url=ollama_api_base_url_param
+            # sarana_cache_dir bisa ditambahkan jika ingin mengonfigurasi dari API
+        )
+
+        if parsed_result_dict.get("error_parsing"):
+             raise HTTPException(status_code=422, detail=f"Error parsing dokumen: {parsed_result_dict['error_parsing']}")
+
+        # Konversi hasil dictionary ke model Pydantic SaranaParseDocumentResponse
+        return SaranaParseDocumentResponse(**parsed_result_dict)
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        # print(f"ERROR in Sarana router (/parse-document): {type(e).__name__} - {e}")
+        raise HTTPException(status_code=500, detail=f"Terjadi kesalahan internal saat parsing dokumen Sarana: {str(e)}")
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+            except Exception as e_remove:
+                print(f"Warning (SaranaRouter): Gagal menghapus file temporer {temp_file_path}: {e_remove}")
+        if hasattr(file, 'file') and file.file and not file.file.closed:
+            file.file.close()
+
+
+@router.get("/health", summary="Health Check Sarana Router")
+async def sarana_health():
+    """Cek kesehatan untuk router Sarana."""
+    return {"status": "ok", "message": "Sarana router is healthy"}

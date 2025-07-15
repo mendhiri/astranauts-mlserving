@@ -1,29 +1,22 @@
 from typing import Dict, Any, Optional
+import sys
+import os
 
+# Perbaiki import path untuk PrabuModule
 try:
+    # Coba import langsung jika sudah di PYTHONPATH
     from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, ml_credit_risk_predictor
 except ImportError:
-    # Fallback jika PrabuModule dianggap sebagai bagian dari 'app' (misalnya app.PrabuModule)
-    # atau jika sys.path dimodifikasi untuk menyertakan root.
-    # Untuk tujuan pengembangan ini, kita akan mencoba membuatnya bekerja dengan asumsi
-    # bahwa saat runtime, PrabuModule akan dapat diakses.
-    # Jika ini dijalankan sebagai bagian dari FastAPI app, dan root ada di PYTHONPATH:
-    import sys
-    import os
-    # Menambahkan direktori root proyek ke sys.path
-    # Ini adalah praktik umum jika modul tidak diinstal sebagai package.
-    # __file__ -> app/services/prabu_service.py
-    # os.path.dirname(__file__) -> app/services
-    # os.path.dirname(os.path.dirname(__file__)) -> app
-    # os.path.dirname(os.path.dirname(os.path.dirname(__file__))) -> ROOT
+    # Fallback: tambahkan project root ke sys.path
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
     
-    # Sekarang coba impor lagi
-    from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, ml_credit_risk_predictor
-
-# --- END Penyesuaian Impor ---
+    try:
+        from PrabuModule import altman_z_score, beneish_m_score, financial_ratios, ml_credit_risk_predictor
+    except ImportError as e:
+        print(f"ERROR: Tidak dapat mengimpor PrabuModule: {e}")
+        raise ImportError("PrabuModule tidak dapat diimpor. Pastikan path sudah benar.")
 
 
 KEY_MAP_PRABU = {
